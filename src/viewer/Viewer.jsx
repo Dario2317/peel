@@ -86,6 +86,7 @@ export function Viewer({
       onRedo: () => props.current.onRedo?.(),
       onPencilSeen: markPencilSeen,
       onHover: (e) => showCursor(e ? e.clientX : null, e ? e.clientY : null),
+      rails: true,
     });
     wetInk.current = new WetInk(wetRef.current);
 

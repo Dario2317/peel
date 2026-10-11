@@ -1,6 +1,7 @@
 // Simple dialogs any code can open and wait for:
 //   if (await askConfirm({ title: 'Delete?' })) …
 //   const name = await askText({ title: 'Rename', initial: 'Old name' });
+//   const pick = await askChoice({ title, choices: [{ label, value, danger }] });
 // One <DialogHost/> in App.jsx shows whichever dialog is open.
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
@@ -25,6 +26,13 @@ export function askText({ title, message = '', initial = '', confirmLabel = 'Sav
   });
 }
 
+// Several answers; resolves to the chosen value, or null for Cancel.
+export function askChoice({ title, message = '', choices }) {
+  return new Promise((resolve) => {
+    show({ kind: 'choice', title, message, choices, resolve });
+  });
+}
+
 export function DialogHost() {
   const dialog = useSyncExternalStore(
     (listener) => {
@@ -45,7 +53,7 @@ function Dialog({ dialog, close }) {
   const [text, setText] = useState(dialog.initial ?? '');
   const inputRef = useRef(null);
   const isText = dialog.kind === 'text';
-  const cancelValue = isText ? null : false;
+  const cancelValue = dialog.kind === 'confirm' ? false : null;
 
   useEffect(() => {
     if (isText) inputRef.current?.select();
@@ -56,7 +64,7 @@ function Dialog({ dialog, close }) {
 
   const submit = (e) => {
     e.preventDefault();
-    close(isText ? text : true);
+    if (dialog.kind !== 'choice') close(isText ? text : true);
   };
 
   return (
@@ -74,14 +82,32 @@ function Dialog({ dialog, close }) {
             autoFocus
           />
         )}
-        <div className="dialog-buttons">
-          <button type="button" className="button" onClick={() => close(cancelValue)}>
-            Cancel
-          </button>
-          <button type="submit" className={`button ${dialog.danger ? 'danger' : 'primary'}`}>
-            {dialog.confirmLabel}
-          </button>
-        </div>
+        {dialog.kind === 'choice' ? (
+          <div className="dialog-buttons stacked">
+            {dialog.choices.map((choice) => (
+              <button
+                key={choice.label}
+                type="button"
+                className={`button ${choice.danger ? 'danger' : 'primary'}`}
+                onClick={() => close(choice.value)}
+              >
+                {choice.label}
+              </button>
+            ))}
+            <button type="button" className="button" onClick={() => close(cancelValue)}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="dialog-buttons">
+            <button type="button" className="button" onClick={() => close(cancelValue)}>
+              Cancel
+            </button>
+            <button type="submit" className={`button ${dialog.danger ? 'danger' : 'primary'}`}>
+              {dialog.confirmLabel}
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );

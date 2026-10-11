@@ -30,13 +30,30 @@ export function zoomAround(cam, sx, sy, newScale) {
   return { scale: newScale, x: sx - w.x * newScale, y: sy - w.y * newScale };
 }
 
-// Stops you from scrolling the pages away. If the pages are narrower than
-// the screen they are centered; same for height.
+// Room around the pages to write in, like a desk (page units; a page is
+// 1000 wide): beside the pages, and above the first / below the last one.
+export const SIDE_ROOM = 750;
+export const END_ROOM = 500;
+
+// Stops you from scrolling the pages away: you can go past their edges into
+// the room around them, but not further. If everything fits on the screen,
+// the pages are centered.
 export function clampCamera(cam, view, contentHeight) {
-  let { x, y } = cam;
-  const contentW = PAGE_WIDTH * cam.scale;
-  x = contentW <= view.width ? (view.width - contentW) / 2 : clamp(x, view.width - contentW, 0);
-  const contentH = contentHeight * cam.scale;
-  y = contentH <= view.height ? (view.height - contentH) / 2 : clamp(y, view.height - contentH, 0);
-  return { x, y, scale: cam.scale };
+  return {
+    x: clampAxis(cam.x, cam.scale, view.width, PAGE_WIDTH, SIDE_ROOM),
+    y: clampAxis(cam.y, cam.scale, view.height, contentHeight, END_ROOM),
+    scale: cam.scale,
+  };
+}
+
+function clampAxis(position, scale, viewSize, contentSize, room) {
+  const size = contentSize * scale;
+  const roomPx = room * scale;
+  if (size + roomPx * 2 <= viewSize) return (viewSize - size) / 2;
+  return clamp(position, viewSize - size - roomPx, roomPx);
+}
+
+// Where the camera must be for the pages to be centered across the screen.
+export function centeredX(viewWidth, scale) {
+  return (viewWidth - PAGE_WIDTH * scale) / 2;
 }

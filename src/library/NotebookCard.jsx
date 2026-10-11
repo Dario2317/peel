@@ -5,8 +5,9 @@ import { useThumbnailUrl } from '../viewer/thumbnails.js';
 import { askConfirm, askText } from '../ui/dialogs.jsx';
 import { Menu } from '../ui/Menu.jsx';
 import { MoreIcon } from '../ui/icons.jsx';
+import { dragSource } from './dragDrop.js';
 
-export function NotebookCard({ notebook, onOpen }) {
+export function NotebookCard({ notebook, onOpen, onMove }) {
   const coverId = notebook.coverPageId ?? notebook.pageIds[0];
   const coverPage = useLiveQuery(() => (coverId ? db.pages.get(coverId) : undefined), [coverId]);
   const coverUrl = useThumbnailUrl(coverPage);
@@ -28,7 +29,7 @@ export function NotebookCard({ notebook, onOpen }) {
   };
 
   return (
-    <div className="notebook-card">
+    <div className="notebook-card" {...dragSource('notebook', notebook.id)}>
       <button className="cover" onClick={onOpen} aria-label={`Open ${notebook.title}`}>
         {coverUrl ? <img src={coverUrl} alt="" draggable={false} /> : <div className="cover-placeholder" />}
       </button>
@@ -44,6 +45,7 @@ export function NotebookCard({ notebook, onOpen }) {
           icon={<MoreIcon />}
           items={[
             { label: 'Rename', onSelect: rename },
+            { label: 'Move to…', onSelect: onMove },
             { label: 'Delete', onSelect: remove, danger: true },
           ]}
         />

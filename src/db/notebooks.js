@@ -1,11 +1,12 @@
 import { db } from './db.js';
 import { newId } from '../utils/ids.js';
 
-export async function createNotebook(title) {
+export async function createNotebook(title, folderId = null) {
   const now = Date.now();
   const notebook = {
     id: newId('nb'),
     title: title || 'New notebook',
+    folderId, // the folder it's in (null = top of the library)
     createdAt: now,
     updatedAt: now,
     openedAt: now,
@@ -20,6 +21,10 @@ export async function createNotebook(title) {
 
 export function renameNotebook(id, title) {
   return db.notebooks.update(id, { title: title.trim() || 'Untitled', updatedAt: Date.now() });
+}
+
+export function moveNotebook(id, folderId) {
+  return db.notebooks.update(id, { folderId: folderId ?? null });
 }
 
 export function markOpened(id) {

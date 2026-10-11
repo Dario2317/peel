@@ -75,6 +75,18 @@ export const PasteIcon = (p) => (
     <path d="M9 10h6M9 14h6" />
   </Icon>
 );
+export const FolderIcon = (p) => (
+  <Icon {...p}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  </Icon>
+);
+export const NewFolderIcon = (p) => (
+  <Icon {...p}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="M12 10v6M9 13h6" />
+  </Icon>
+);
+export const ChevronIcon = (p) => <Icon {...p}><path d="M9 6l6 6-6 6" /></Icon>;
 export const PageIcon = (p) => (
   <Icon {...p}>
     <path d="M6 2h9l5 5v15H6z" />

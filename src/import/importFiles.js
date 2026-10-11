@@ -11,11 +11,12 @@ import { readPdfPageSizes } from './pdf.js';
 /**
  * files:      already in the order you want
  * notebookId: add to this notebook, or null to create a new one with `title`
+ *             (in folder `folderId`)
  * insertAt:   page index to insert at (default: at the end)
  * onProgress: ({ done, total, label }) => void
  * Returns { notebookId, added, errors }
  */
-export async function importFiles({ files, notebookId = null, title, insertAt = null, onProgress }) {
+export async function importFiles({ files, notebookId = null, folderId = null, title, insertAt = null, onProgress }) {
   const errors = [];
   let added = 0;
   let position = insertAt;
@@ -26,7 +27,7 @@ export async function importFiles({ files, notebookId = null, title, insertAt = 
     report(file.name);
     try {
       const { source, pages } = await prepareFile(file, (n, total) => report(`${file.name} — page ${n} of ${total}`));
-      if (!notebookId) notebookId = await createNotebook(title);
+      if (!notebookId) notebookId = await createNotebook(title, folderId);
       position = await saveFile(notebookId, source, pages, position);
       added += pages.length;
     } catch (error) {

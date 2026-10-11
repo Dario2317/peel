@@ -19,8 +19,16 @@ db.version(1).stores({
   settings: 'key', // small key → value preferences
 });
 
+// Version 2: folders. A notebook's folderId (and a folder's parentId) is the
+// folder it's in, or missing for the top of the library. Only the tables
+// that changed are listed; the rest stay as they were.
+db.version(2).stores({
+  notebooks: 'id, updatedAt, folderId',
+  folders: 'id, parentId',
+});
+
 // All tables, handy for transactions that touch everything.
 export const ALL_TABLES = [
-  db.notebooks, db.sourceFiles, db.pages, db.thumbnails,
+  db.notebooks, db.folders, db.sourceFiles, db.pages, db.thumbnails,
   db.annotations, db.tapeStats, db.reviewLog, db.settings,
 ];

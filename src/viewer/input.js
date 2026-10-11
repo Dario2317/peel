@@ -3,7 +3,9 @@
 // Pointer Events give one stream of events for every kind of input, and
 // e.pointerType tells us which: 'pen' (Apple Pencil), 'touch' (finger) or
 // 'mouse'. This file decides what each pointer does:
-//   - navigation: pan with one finger, pinch-zoom with two, fling to scroll
+//   - navigation: pan with one finger, pinch-zoom with two, fling to scroll.
+//     With `rails`, a one-finger pan that starts mostly up/down (or
+//     sideways) sticks to that direction, so scrolling doesn't drift.
 //   - taps: one-finger tap, two-finger tap (undo), three-finger tap (redo)
 //   - tools (tape, moving notes, later drawing): `routePointer(e)` decides;
 //     it returns 'navigate' or a handler { move(e), up(e), cancel() }
@@ -22,6 +24,7 @@ const MULTI_TAP_MAX_MS = 400; // two/three-finger taps
 const PALM_RESTORE_MS = 1000; // a touch this recent when the Pencil lands = palm
 const PALM_RESTORE_DISTANCE = 40; // …or one that has barely moved
 const FRICTION_MS = 325; // how quickly a fling slows down (like iOS)
+const RAIL_RATIO = 2; // a pan this many times more vertical than sideways sticks to vertical
 
 export class GestureController {
   /**
@@ -30,7 +33,8 @@ export class GestureController {
    *   onGestureStart(), onGestureEnd(),
    *   onTap({ x, y, pointerType, target }), onUndo(), onRedo(),
    *   onPencilSeen(), onHover(event | null)  (Pencil hovering, iPad Pro/Air M2+)
-   *   routePointer(event) -> 'navigate' | { move(e), up(e), cancel() }
+   *   routePointer(event) -> 'navigate' | { move(e), up(e), cancel() },
+   *   rails (true/false)
    * }
    */
   constructor(element, options) {
@@ -132,6 +136,7 @@ export class GestureController {
         startCamera: this.o.getCamera(),
         maxPointers: 0,
         moved: false,
+        rail: undefined, // 'x', 'y' or null (free), decided once the finger moves
         type,
       };
       // Where the element is on screen: zooming happens around the fingers,
@@ -207,7 +212,10 @@ export class GestureController {
       const scale = this.o.clampScale(cam.scale * (now.spread / last.spread));
       cam = zoomAround(cam, last.x - this.box.left, last.y - this.box.top, scale);
     }
-    this.o.setCamera({ ...cam, x: cam.x + now.x - last.x, y: cam.y + now.y - last.y });
+    const rail = this.rail(now.count);
+    const dx = rail === 'y' ? 0 : now.x - last.x;
+    const dy = rail === 'x' ? 0 : now.y - last.y;
+    this.o.setCamera({ ...cam, x: cam.x + dx, y: cam.y + dy });
 
     if (now.count === 1) {
       const t = performance.now();
@@ -216,6 +224,20 @@ export class GestureController {
     } else {
       this.samples = [];
     }
+  }
+
+  // Which direction a one-finger pan sticks to (see `rails` above).
+  rail(count) {
+    const g = this.gesture;
+    if (!this.o.rails || count !== 1 || g.maxPointers !== 1) return null;
+    if (g.rail === undefined) {
+      const p = this.pointers.values().next().value;
+      const dx = Math.abs(p.x - p.startX);
+      const dy = Math.abs(p.y - p.startY);
+      if (Math.hypot(dx, dy) <= TAP_SLOP) return null;
+      g.rail = dy > dx * RAIL_RATIO ? 'y' : dx > dy * RAIL_RATIO ? 'x' : null;
+    }
+    return g.rail;
   }
 
   endGesture(e, cancelled) {
@@ -242,8 +264,8 @@ export class GestureController {
     const s = this.samples;
     if (!cancelled && g.maxPointers === 1 && s.length >= 2) {
       const dt = s[s.length - 1].t - s[0].t;
-      const vx = dt > 0 ? (s[s.length - 1].x - s[0].x) / dt : 0;
-      const vy = dt > 0 ? (s[s.length - 1].y - s[0].y) / dt : 0;
+      const vx = dt > 0 && g.rail !== 'y' ? (s[s.length - 1].x - s[0].x) / dt : 0;
+      const vy = dt > 0 && g.rail !== 'x' ? (s[s.length - 1].y - s[0].y) / dt : 0;
       if (Math.hypot(vx, vy) > 0.3 && performance.now() - s[s.length - 1].t < 60) {
         this.startInertia(vx, vy);
         return;
@@ -329,8 +351,12 @@ export class GestureController {
       const factor = Math.exp(-Math.max(-50, Math.min(50, dy)) * 0.006);
       const scale = this.o.clampScale(cam.scale * factor);
       this.o.setCamera(zoomAround(cam, e.clientX - rect.left, e.clientY - rect.top, scale));
+    } else if (e.shiftKey && !dx) {
+      this.o.setCamera({ ...cam, x: cam.x - dy }); // Shift+wheel scrolls sideways
     } else {
-      this.o.setCamera({ ...cam, x: cam.x - (e.shiftKey && !dx ? dy : dx), y: cam.y - (e.shiftKey && !dx ? 0 : dy) });
+      // A trackpad scroll that's mostly up/down doesn't drift sideways.
+      const sideways = !this.o.rails || Math.abs(dx) * RAIL_RATIO > Math.abs(dy);
+      this.o.setCamera({ ...cam, x: cam.x - (sideways ? dx : 0), y: cam.y - dy });
     }
     this.o.onGestureEnd?.();
   }

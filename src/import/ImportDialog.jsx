@@ -7,9 +7,10 @@ import { PageIcon } from '../ui/icons.jsx';
  * Shown after picking/dropping/pasting files.
  *   notebookId:   add to this notebook (null = make a new one)
  *   currentIndex: the page you're on, for "insert after this page"
+ *   folderId:     the folder a new notebook goes in
  *   onDone(notebookId)
  */
-export function ImportDialog({ files, notebookId = null, currentIndex = null, onDone, onClose }) {
+export function ImportDialog({ files, notebookId = null, currentIndex = null, folderId = null, onDone, onClose }) {
   const [sortBy, setSortBy] = useState('name');
   const [title, setTitle] = useState(() => defaultNotebookTitle(files));
   const [where, setWhere] = useState('end');
@@ -30,6 +31,7 @@ export function ImportDialog({ files, notebookId = null, currentIndex = null, on
     const result = await importFiles({
       files: sorted,
       notebookId,
+      folderId,
       title: title.trim() || defaultNotebookTitle(files),
       insertAt: notebookId && where === 'after' && currentIndex !== null ? currentIndex + 1 : null,
       onProgress: setProgress,

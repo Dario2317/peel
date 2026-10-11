@@ -4,7 +4,7 @@
 //   - onRange(first, last): which pages should exist (near the screen)
 //   - onCurrentPage(index): the page you are looking at
 //   - onSettle(view): you stopped moving → time to render sharper PDF pages
-import { clampCamera, fitWidthScale, scaleLimits, zoomAround } from './camera.js';
+import { centeredX, clampCamera, fitWidthScale, scaleLimits, zoomAround } from './camera.js';
 import { pageIndexAt, pagesInRange, PAGE_GAP } from './layout.js';
 import { clamp } from '../utils/platform.js';
 
@@ -120,7 +120,7 @@ export class Viewport {
       // Keep the same spot of the current page at the top.
       this.restoreAnchor({ ...anchor, zoom: 1, centerX: r.w / 2 });
     } else {
-      this.setCamera({ scale, x: 0, y: r ? -(r.y - PAGE_GAP / 2) * scale : 0 });
+      this.setCamera({ scale, x: centeredX(this.size.width, scale), y: r ? -(r.y - PAGE_GAP / 2) * scale : 0 });
     }
     this.settleSoon();
   }

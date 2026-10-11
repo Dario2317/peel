@@ -21,6 +21,10 @@ What's done, what's next, and requests to remember.
 - **Milestone 3** — draw directly on the pages: pen, marker, eraser, 8
   colors, 3 sizes, smoothing, Pencil hover dot, shapes (hold to snap), lasso
   to move or delete ink, tapes and post-its; ink can run past the page edge.
+- **After Milestone 3** — room around the pages to write next to them (like
+  Freeform; one-finger scrolling sticks to up/down so it doesn't drift);
+  folders in the library (nested, Move to…, drag onto a folder, delete keeps
+  or removes what's inside).
 
 ## Next
 

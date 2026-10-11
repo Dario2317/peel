@@ -38,11 +38,17 @@ code goes online, never your books or notes.
 
 ## Using Peel
 
+- **Library**: notebooks and folders. **New folder** makes a folder where you
+  are; open it to see what's inside, and use the path at the top to go back.
+  Move things with ··· → **Move to…**, or drag a notebook onto a folder (on
+  the iPad: touch and hold it, then drag). Deleting a folder asks whether to
+  keep what's inside.
 - **Move** (hand): open post-its and tapes by tapping them; drag them with the
   Pencil (or mouse) to move them, drag a tape's corners to resize it.
 - **Pen / Marker / Eraser**: write and highlight directly on the page (8 colors,
   3 sizes, smoothing). Hold the Pencil still at the end of an oval, rectangle,
-  line or arrow and it snaps into a clean shape. Ink can run into the margin.
+  line or arrow and it snaps into a clean shape. There's room around the
+  pages, like a desk: scroll past a page's edge and write next to it.
 - **Lasso**: circle ink, tapes and post-its, then drag them somewhere else or delete.
 - **Post-it**: tap the page to pin a note there (it stays the same small
   size at any zoom). Tap a note to open its board: dotted paper to draw on with

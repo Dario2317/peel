@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampCamera, fitWidthScale, screenToWorld, worldToScreen, zoomAround } from './camera.js';
+import { clampCamera, END_ROOM, fitWidthScale, SIDE_ROOM, screenToWorld, worldToScreen, zoomAround } from './camera.js';
 import { computeLayout, pageIndexAt, pagesInRange, PAGE_GAP, PAGE_WIDTH } from './layout.js';
 
 describe('camera', () => {
@@ -20,16 +20,18 @@ describe('camera', () => {
     expect(after.y).toBeCloseTo(before.y);
   });
 
-  it('centers pages narrower than the screen', () => {
+  it('centers the pages when they and the room around them fit', () => {
     const view = { width: 1000, height: 800 };
-    const cam = clampCamera({ x: -300, y: 0, scale: 0.5 }, view, 10000);
-    expect(cam.x).toBe((1000 - PAGE_WIDTH * 0.5) / 2);
+    const cam = clampCamera({ x: -300, y: 0, scale: 0.25 }, view, 10000);
+    expect(cam.x).toBe((1000 - PAGE_WIDTH * 0.25) / 2);
   });
 
-  it('cannot scroll past the first or last page', () => {
+  it('lets you go past the edges into the room around the pages, not further', () => {
     const view = { width: 800, height: 600 };
-    expect(clampCamera({ x: 0, y: 500, scale: 1 }, view, 5000).y).toBe(0);
-    expect(clampCamera({ x: 0, y: -99999, scale: 1 }, view, 5000).y).toBe(600 - 5000);
+    expect(clampCamera({ x: 0, y: 99999, scale: 1 }, view, 5000).y).toBe(END_ROOM);
+    expect(clampCamera({ x: 0, y: -99999, scale: 1 }, view, 5000).y).toBe(600 - 5000 - END_ROOM);
+    expect(clampCamera({ x: 99999, y: 0, scale: 1 }, view, 5000).x).toBe(SIDE_ROOM);
+    expect(clampCamera({ x: -99999, y: 0, scale: 1 }, view, 5000).x).toBe(800 - PAGE_WIDTH - SIDE_ROOM);
   });
 
   it('fit width leaves a small margin', () => {

@@ -7,11 +7,16 @@ import { DialogHost } from './ui/dialogs.jsx';
 import { ToastHost } from './ui/toast.jsx';
 import { UpdatePrompt } from './ui/UpdatePrompt.jsx';
 
-// Which screen to show is kept in the address after "#", e.g. #/nb/nb_123.
-// That way reloading the page keeps you where you were.
+// Which screen to show is kept in the address after "#": #/nb/<id> for a
+// notebook, #/f/<id> for a folder in the library. That way reloading the
+// page keeps you where you were.
 function readRoute() {
-  const match = location.hash.match(/^#\/nb\/(.+)$/);
-  return { notebookId: match ? decodeURIComponent(match[1]) : null };
+  const notebook = location.hash.match(/^#\/nb\/(.+)$/);
+  const folder = location.hash.match(/^#\/f\/(.+)$/);
+  return {
+    notebookId: notebook ? decodeURIComponent(notebook[1]) : null,
+    folderId: folder ? decodeURIComponent(folder[1]) : null,
+  };
 }
 
 export function App() {
@@ -33,9 +38,14 @@ export function App() {
   const openNotebook = (id) => {
     location.hash = `#/nb/${id}`;
   };
-  const backToLibrary = () => {
+  const openFolder = (id) => {
+    location.hash = id ? `#/f/${id}` : '#/';
+  };
+  // Back from a notebook goes to the folder it's in.
+  const backToLibrary = async () => {
     setSetting('lastNotebook', null);
-    location.hash = '#/';
+    const notebook = await db.notebooks.get(route.notebookId);
+    openFolder(notebook?.folderId ?? null);
   };
 
   return (
@@ -43,7 +53,7 @@ export function App() {
       {route.notebookId ? (
         <NotebookScreen key={route.notebookId} notebookId={route.notebookId} onBack={backToLibrary} />
       ) : (
-        <Library onOpen={openNotebook} />
+        <Library key={route.folderId ?? 'top'} folderId={route.folderId} onOpen={openNotebook} onOpenFolder={openFolder} />
       )}
       <DialogHost />
       <ToastHost />

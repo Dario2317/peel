@@ -97,3 +97,174 @@
   margin-top: 40px;
   text-align: center;
 }
+
+/* --- Folders --------------------------------------------------------- */
+
+.library-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-left: -10px;
+}
+.library-title-text {
+  min-width: 0;
+}
+.library-title h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.crumbs svg {
+  flex-shrink: 0;
+}
+.crumb {
+  min-width: 0;
+  max-width: 160px;
+  padding: 2px 4px;
+  overflow: hidden;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.crumb.drop-over {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* A folder: a paper with the cover of a notebook inside, peeking out. */
+.notebook-card .folder-cover {
+  position: relative;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.folder-cover > span {
+  position: absolute;
+  transition: transform 0.15s;
+}
+.folder-back {
+  left: 3%;
+  right: 3%;
+  bottom: 6%;
+  height: 66%;
+  border-radius: 4px 12px 12px 12px;
+  background: #e0a03a;
+}
+.folder-back::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -9%;
+  width: 42%;
+  height: 12%;
+  border-radius: 10px 10px 0 0;
+  background: inherit;
+}
+.folder-paper {
+  left: 12%;
+  right: 12%;
+  bottom: 22%;
+  height: 56%;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.2);
+}
+.folder-paper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.folder-front {
+  left: 3%;
+  right: 3%;
+  bottom: 6%;
+  height: 50%;
+  border-radius: 10px;
+  background: linear-gradient(#f5c463, #eaae45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 4px 14px rgba(60, 40, 20, 0.15);
+}
+.folder-card.drop-over .folder-front {
+  transform: translateY(6px) scale(1.04);
+}
+.folder-card.drop-over .folder-paper {
+  transform: translateY(-8px);
+}
+.notebook-card.is-dragged {
+  opacity: 0.4;
+}
+
+/* "Move to…" */
+.move-dialog .folder-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px;
+}
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.folder-row svg {
+  flex-shrink: 0;
+  color: #e0a03a;
+}
+.folder-row span:first-of-type {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder-row:hover:not(:disabled),
+.folder-row:active:not(:disabled) {
+  background: var(--desk);
+}
+.folder-row.current {
+  font-weight: 600;
+}
+.folder-row:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.move-dialog .dialog-buttons .spacer {
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .header-actions .label {
+    display: none;
+  }
+  .library-header h1 {
+    font-size: 22px;
+  }
+}
