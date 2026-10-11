@@ -1,0 +1,19 @@
+// Small checks about the device we're running on.
+
+// iPadOS Safari pretends to be a Mac, so we also check for a touch screen.
+export function isIOS() {
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+// True when opened from the Home Screen (not in a normal browser tab).
+export function isStandalone() {
+  return (
+    window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+  );
+}
+
+export function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}

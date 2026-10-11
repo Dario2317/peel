@@ -1,0 +1,450 @@
+/* Colors and sizes used everywhere. */
+:root {
+  --paper: #f4efe6;
+  --desk: #e7dfd2;
+  --surface: #fffdf8;
+  --ink: #2b2620;
+  --muted: #7a6f63;
+  --line: #e1d7c7;
+  --accent: #d95a43;
+  --accent-soft: #f6d9d1;
+  --mint: #8cc7b5;
+  --danger: #b83227;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(60, 40, 20, 0.08), 0 6px 18px rgba(60, 40, 20, 0.1);
+  --tap: 44px; /* comfortable finger size for buttons */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  /* No double-tap-to-zoom anywhere. */
+  touch-action: manipulation;
+}
+
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  /* An app, not a web page: no text selection, no long-press menus. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  font: inherit;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 13px;
+}
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.inline-icon {
+  vertical-align: -3px;
+}
+
+/* --- Buttons --------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.button:active {
+  transform: scale(0.97);
+}
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.button.dark {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: transparent;
+  color: #fff;
+}
+.button.small {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+.button.large {
+  min-height: 52px;
+  padding: 0 24px;
+  font-size: 17px;
+}
+
+.icon-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.icon-button:active,
+.icon-button.on {
+  background: rgba(60, 40, 20, 0.1);
+}
+.icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.icon-button.small {
+  width: 32px;
+  height: 32px;
+}
+
+.text-input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 17px; /* 16px+ stops iPhone Safari from zooming into the field */
+}
+.text-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--desk);
+}
+.segmented button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.segmented button.on {
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-weight: 600;
+}
+
+/* --- Dialogs --------------------------------------------------------- */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(30, 22, 15, 0.4);
+  animation: fade-in 0.15s ease-out;
+}
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(440px, 100%);
+  max-height: calc(100% - 32px);
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  animation: pop-in 0.18s ease-out;
+}
+.dialog h2 {
+  font-size: 19px;
+}
+.dialog p {
+  margin: 0;
+}
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.field > span {
+  color: var(--muted);
+}
+
+.import-dialog .file-list {
+  flex: 1 1 auto;
+  min-height: 60px;
+  max-height: 220px;
+  margin: 0;
+  padding: 6px 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  list-style: none;
+  font-size: 14px;
+}
+.import-dialog .file-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  color: var(--ink);
+}
+.import-dialog .file-list li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.error-box {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fbe3df;
+  color: var(--danger);
+  font-size: 14px;
+}
+.error-box ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--desk);
+  overflow: hidden;
+}
+.progress-bar div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+.progress .small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Menus ----------------------------------------------------------- */
+
+.menu {
+  position: relative;
+}
+.menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--line);
+  animation: pop-in 0.12s ease-out;
+}
+.menu-list.right {
+  right: 0;
+}
+.menu-list.left {
+  left: 0;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.menu-item:active,
+.menu-item:hover {
+  background: var(--desk);
+}
+.menu-item.danger {
+  color: var(--danger);
+}
+
+/* --- Toasts ---------------------------------------------------------- */
+
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + var(--safe-bottom));
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(520px, calc(100% - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 14px;
+  background: #2b2620;
+  color: #fff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+  animation: pop-in 0.18s ease-out;
+}
+.toast .icon-button {
+  color: #fff;
+  font-size: 20px;
+}
+
+/* --- Shared bits ----------------------------------------------------- */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  margin: 10vh auto;
+  padding: 24px;
+  text-align: center;
+}
+.empty-state p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.drop-overlay {
+  position: fixed;
+  inset: 12px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed var(--accent);
+  border-radius: 20px;
+  background: rgba(244, 239, 230, 0.85);
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--mint);
+}
+.hint > div:first-child {
+  flex: 1;
+}
+.hint p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.hint-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}

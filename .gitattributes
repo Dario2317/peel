@@ -1,0 +1,4 @@
+# Keep line endings the same on every computer, and never touch binary files.
+* text=auto eol=lf
+*.pdf binary
+*.png binary
