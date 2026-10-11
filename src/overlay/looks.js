@@ -19,7 +19,13 @@ export const POSTIT_COLORS = [
   { id: 'blue', value: '#aedcff' },
   { id: 'green', value: '#bdeba0' },
   { id: 'orange', value: '#ffc98a' },
+  { id: 'purple', value: '#d9c6ff' },
+  { id: 'mint', value: '#b3ecdf' },
+  { id: 'white', value: '#fbf8f2' },
 ];
+
+// A closed post-it is a pin on the page: always this size on screen.
+export const NOTE_MARKER_PX = 38;
 
 export function colorValue(list, id) {
   return (list.find((c) => c.id === id) ?? list[0]).value;

@@ -40,7 +40,10 @@ code goes online, never your books or notes.
 
 - **Move** (hand): open post-its and tapes by tapping them; drag them with the
   Pencil (or mouse) to move them, drag a tape's corners to resize it.
-- **Post-it**: tap the page to stick a note there.
+- **Post-it**: tap the page to pin a note there (it stays the same small
+  size at any zoom). Tap a note to open its board: lined paper to draw on with
+  the Pencil (pen, marker, eraser, 8 colors, 3 sizes), scroll and pinch-zoom
+  with your fingers, or tap Type to use the keyboard.
 - **Tape**: drag over what you want to hide. Tap the tool again for color and pattern.
 - **Peek**: see through all tapes while editing.
 - **Undo / Redo**: buttons, two-finger tap (undo), three-finger tap (redo), Ctrl/Cmd+Z.

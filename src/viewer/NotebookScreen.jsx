@@ -16,6 +16,7 @@ import { StudyBar } from '../study/StudyBar.jsx';
 import { StudySummary } from '../study/StudySummary.jsx';
 import { newId } from '../utils/ids.js';
 import { clamp } from '../utils/platform.js';
+import { NOTE_MARKER_PX } from '../overlay/looks.js';
 import { Viewer } from './Viewer.jsx';
 import { Thumbnails } from './Thumbnails.jsx';
 import { CropTool } from './CropTool.jsx';
@@ -26,7 +27,7 @@ import {
 } from '../ui/icons.jsx';
 import '../styles/viewer.css';
 
-const POSTIT_SIZE = 0.07; // of the page width
+
 
 export function NotebookScreen({ notebookId, onBack }) {
   const notebook = useLiveQuery(async () => (await db.notebooks.get(notebookId)) ?? null, [notebookId]);
@@ -94,19 +95,22 @@ export function NotebookScreen({ notebookId, onBack }) {
       if (mode === 'edit' && tool === 'postit') actions.createPostIt(x, y, pointerType);
     },
     createPostIt(clientX, clientY, pointerType) {
-      const hit = viewerRef.current?.viewport.clientToPage(clientX, clientY);
+      const viewport = viewerRef.current?.viewport;
+      const hit = viewport?.clientToPage(clientX, clientY);
       if (!hit) return;
-      const height = (POSTIT_SIZE * hit.rect.w) / hit.rect.h; // as a fraction of the page height
+      // The pin is NOTE_MARKER_PX on screen; center it where you tapped.
+      const scale = viewport.getCamera().scale;
+      const w = NOTE_MARKER_PX / scale / hit.rect.w;
+      const h = NOTE_MARKER_PX / scale / hit.rect.h;
       const note = {
         id: newId('note'),
         type: 'postit',
-        x: clamp(hit.x - POSTIT_SIZE / 2, 0, 1 - POSTIT_SIZE),
-        y: clamp(hit.y - height / 2, 0, 1 - height),
-        size: POSTIT_SIZE,
+        x: clamp(hit.x - w / 2, 0, 1 - w),
+        y: clamp(hit.y - h / 2, 0, 1 - h),
         color: latest.current.postItColor,
-        ink: [], // drawn with the Pencil inside the open note
+        ink: [], // drawn on the note's board (board units)
         text: '', // optional typed text
-        style: { font: 'system', fontSize: 0.02, color: '#2b2620', bold: false, italic: false },
+        view: null, // where you last were on the board
         createdAt: Date.now(),
       };
       store.change(hit.pageId, null, note);
@@ -156,7 +160,8 @@ export function NotebookScreen({ notebookId, onBack }) {
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing) {
         const sel = latest.current.selected;
         const item = sel && store.getItem(sel.pageId, sel.itemId);
-        if (item && latest.current.mode === 'edit') {
+        // Only tapes: on an open post-it board the key must never delete the note.
+        if (item?.type === 'tape' && latest.current.mode === 'edit') {
           e.preventDefault();
           store.change(sel.pageId, item, null);
           setSelected(null);

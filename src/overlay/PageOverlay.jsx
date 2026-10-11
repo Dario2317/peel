@@ -44,15 +44,7 @@ export const PageOverlay = memo(function PageOverlay({ page, pageHeight, scale, 
       {items
         .filter((item) => item.type === 'postit')
         .map((note) => (
-          <PostIt
-            key={note.id}
-            item={note}
-            pageId={page.id}
-            pageHeight={pageHeight}
-            open={selectedId === note.id}
-            resizable={mode === 'edit'}
-            handleSize={handleSize}
-          />
+          <PostIt key={note.id} item={note} pageId={page.id} pageHeight={pageHeight} open={selectedId === note.id} />
         ))}
     </div>
   );

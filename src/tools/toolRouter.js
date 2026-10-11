@@ -10,6 +10,7 @@
 import { newId } from '../utils/ids.js';
 import { clamp } from '../utils/platform.js';
 import { pencil } from '../viewer/pencil.js';
+import { NOTE_MARKER_PX } from '../overlay/looks.js';
 
 const DRAG_SLOP = 4; // px the Pencil/mouse may move and still count as a tap
 const MIN_TAPE = { width: 12, height: 6 }; // page units (a page is 1000 wide)
@@ -35,10 +36,7 @@ export function createToolRouter(ctx) {
     if (itemEl) {
       const { pageId, itemId } = itemEl.dataset;
       const handle = e.target.closest('[data-handle]')?.dataset.handle;
-      if (!handle) return dragItem(e, viewport, pageId, itemId);
-      return store.getItem(pageId, itemId)?.type === 'postit'
-        ? resizeNote(viewport, pageId, itemId)
-        : resizeTape(e, viewport, pageId, itemId, handle);
+      return handle ? resizeTape(e, viewport, pageId, itemId, handle) : dragItem(e, viewport, pageId, itemId);
     }
     if (tool === 'tape') {
       const hit = viewport.clientToPage(e.clientX, e.clientY);
@@ -54,9 +52,10 @@ export function createToolRouter(ctx) {
     else ctx.actions.tapEmpty({ x, y, pointerType });
   }
 
-  // Size of an item as fractions of the page.
-  function itemSize(item, rect) {
-    if (item.type === 'postit') return { w: item.size, h: (item.size * rect.w) / rect.h };
+  // Size of an item as fractions of the page. A post-it pin has a fixed
+  // size on screen, so its size on the page depends on the zoom.
+  function itemSize(item, rect, scale) {
+    if (item.type === 'postit') return { w: NOTE_MARKER_PX / scale / rect.w, h: NOTE_MARKER_PX / scale / rect.h };
     return { w: item.w, h: item.h };
   }
 
@@ -76,7 +75,7 @@ export function createToolRouter(ctx) {
         const dy = ev.clientY - start.y;
         if (!moved && Math.hypot(dx, dy) < DRAG_SLOP) return;
         moved = true;
-        const { w, h } = itemSize(original, rect);
+        const { w, h } = itemSize(original, rect, scale);
         const next = {
           ...original,
           x: clamp(original.x + dx / (rect.w * scale), 0, 1 - w),
@@ -165,32 +164,6 @@ export function createToolRouter(ctx) {
         if (handle.includes('n')) top = clamp(p.y, 0, bottom - minH);
         if (handle.includes('s')) bottom = clamp(p.y, top + minH, 1);
         const next = { ...original, x: left, y: top, w: right - left, h: bottom - top };
-        store.change(pageId, current, next, { history: false });
-        current = next;
-      },
-      up() {
-        store.pushHistory([{ pageId, before: original, after: current }]);
-      },
-      cancel() {
-        store.change(pageId, current, original, { history: false });
-      },
-    };
-  }
-
-  // A post-it stays square: its size follows the corner you drag.
-  function resizeNote(viewport, pageId, itemId) {
-    const original = store.getItem(pageId, itemId);
-    const index = viewport.pageIds.indexOf(pageId);
-    if (!original || index < 0) return 'navigate';
-    const rect = viewport.layout.rects[index];
-    const maxSize = Math.min(1 - original.x, ((1 - original.y) * rect.h) / rect.w, 0.35);
-    let current = original;
-
-    return {
-      move(ev) {
-        const p = viewport.clientToPage(ev.clientX, ev.clientY, index);
-        const wanted = Math.max(p.x - original.x, ((p.y - original.y) * rect.h) / rect.w);
-        const next = { ...original, size: clamp(wanted, 0.03, maxSize) };
         store.change(pageId, current, next, { history: false });
         current = next;
       },

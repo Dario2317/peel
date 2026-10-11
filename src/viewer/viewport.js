@@ -264,6 +264,8 @@ export class Viewport {
     if (!this.ready) return;
     const { x, y, scale } = this.camera;
     this.world.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    // Things that keep their size on screen (post-it pins) divide by this.
+    this.world.style.setProperty('--zoom', scale);
 
     // Pages within ~1 screen above/below exist; the rest are removed to free memory.
     const view = this.visibleWorldRect();

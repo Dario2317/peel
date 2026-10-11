@@ -119,6 +119,25 @@ export const EyeIcon = (p) => (
     <circle cx="12" cy="12" r="3" />
   </Icon>
 );
+export const PenIcon = (p) => (
+  <Icon {...p}>
+    <path d="M17 3l4 4L8 20l-5 1 1-5z" />
+    <path d="M14.5 5.5l4 4" />
+  </Icon>
+);
+export const HighlighterIcon = (p) => (
+  <Icon {...p}>
+    <path d="M9 11l-5 5v3h3l5-5" />
+    <path d="M13.5 6.5l4 4L12 16l-4-4z" />
+    <path d="M15 5l4 4" />
+    <path d="M3 22h8" strokeWidth="3" opacity="0.5" />
+  </Icon>
+);
+export const ExpandIcon = (p) => (
+  <Icon {...p}>
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </Icon>
+);
 export const EraserIcon = (p) => (
   <Icon {...p}>
     <path d="M7 21h10" />

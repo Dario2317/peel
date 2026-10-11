@@ -1,0 +1,105 @@
+/* An opened post-it: a full-screen lined board in the note's color. */
+.note-board {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  display: flex;
+  flex-direction: column;
+  background: var(--note);
+  animation: board-in 0.18s ease-out;
+}
+@keyframes board-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.board-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: calc(6px + var(--safe-top)) 10px 6px calc(10px + var(--corner-left));
+  background: var(--note);
+  border-bottom: 1px solid rgba(60, 45, 20, 0.15);
+}
+.board-bar .spacer {
+  flex: 1;
+}
+.board-bar .icon-button {
+  color: #2b2620;
+}
+.board-color {
+  margin: 0 8px;
+  box-shadow: 0 0 0 1.5px rgba(60, 45, 20, 0.35);
+}
+.board-colors {
+  position: absolute;
+  top: 100%;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  animation: pop-in 0.12s ease-out;
+}
+
+.board-surface {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  /* Ruled lines (size and position follow the zoom, set in NoteBoard.jsx) */
+  background-color: var(--note);
+  background-image: linear-gradient(to bottom, transparent calc(100% - 1px), rgba(60, 45, 20, 0.2) calc(100% - 1px));
+  background-size: 100% 36px;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.board-surface.drawing {
+  cursor: crosshair;
+}
+.board-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* Typed text sits on the ruled lines */
+.board-text {
+  position: absolute;
+  top: 40px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #2b2620;
+  font: 20px/36px system-ui, -apple-system, sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+}
+.board-text.editing {
+  min-height: 72px;
+  background: rgba(255, 255, 255, 0.3);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.board-tools {
+  position: absolute;
+  left: 50%;
+  bottom: calc(14px + var(--safe-bottom));
+  z-index: 2;
+  width: max-content; /* one row when there's room, wraps on phones */
+  max-width: calc(100% - 16px);
+  transform: translateX(-50%);
+}

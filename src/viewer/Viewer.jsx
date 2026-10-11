@@ -99,7 +99,7 @@ export function Viewer({
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
-      if (document.querySelector('.dialog-backdrop, .crop-tool')) return;
+      if (document.querySelector('.dialog-backdrop, .crop-tool, .note-board')) return;
       const viewport = viewportRef.current;
       if (!viewport.ready) return;
       const mod = e.ctrlKey || e.metaKey;

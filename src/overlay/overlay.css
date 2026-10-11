@@ -129,35 +129,44 @@
 
 /* --- Post-its ------------------------------------------------------------ */
 
-/* Closed post-its are see-through, so you can still read the page under them. */
+/* Closed post-its: small see-through pins with ruled lines and a folded
+   corner. --zoom is the page zoom (set by the viewer), so dividing by it
+   keeps them the same size on screen. */
 .postit {
   position: absolute;
+  width: calc(38px / var(--zoom, 1));
+  height: calc(38px / var(--zoom, 1));
   transform: rotate(var(--tilt));
-  filter: drop-shadow(0 1px 1.5px rgba(40, 25, 10, 0.22));
+  transform-origin: 0 0;
   cursor: pointer;
-  transition: transform 0.15s;
 }
 .postit.open {
-  transform: rotate(0deg) scale(1.06);
+  transform: none;
+  outline: calc(2px / var(--zoom, 1)) solid var(--accent);
+  outline-offset: calc(2px / var(--zoom, 1));
 }
 .postit-paper {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--note) 58%, transparent);
+  /* One even, see-through color, with faint ruled lines */
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 26%, rgba(60, 45, 20, 0.18) 26% 29%),
+    color-mix(in srgb, var(--note) 62%, transparent);
+  background-origin: content-box, border-box;
+  background-clip: content-box, border-box;
+  background-repeat: no-repeat;
+  padding: 18% 12% 26%;
   /* Cut the bottom-right corner off… */
-  clip-path: polygon(0 0, 100% 0, 100% 76%, 76% 100%, 0 100%);
-}
-.postit.open .postit-paper {
-  background: color-mix(in srgb, var(--note) 80%, transparent);
+  clip-path: polygon(0 0, 100% 0, 100% 74%, 74% 100%, 0 100%);
 }
 /* …and show it folded over. */
 .postit::after {
   content: '';
   position: absolute;
-  left: 76%;
-  top: 76%;
-  width: 24%;
-  height: 24%;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.04)), color-mix(in srgb, var(--note) 85%, transparent);
+  left: 74%;
+  top: 74%;
+  width: 26%;
+  height: 26%;
+  background: color-mix(in srgb, var(--note) 62%, rgba(60, 45, 20, 0.35));
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }

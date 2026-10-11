@@ -1,0 +1,85 @@
+/* Finished strokes */
+.ink-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* The stroke being drawn (screen-sized canvas) */
+.wet-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Where the Pencil will land (Pencil hover) */
+.hover-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.55;
+  transform: translate(-50%, -50%);
+}
+.hover-dot.eraser {
+  border: 1.5px solid rgba(40, 30, 20, 0.7);
+  background: rgba(255, 255, 255, 0.4);
+  opacity: 1;
+}
+
+/* --- Drawing toolbar ------------------------------------------------------ */
+
+.draw-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 8px;
+  max-width: calc(100vw - 16px);
+  padding: 5px 8px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgba(40, 25, 10, 0.18), 0 0 0 1px var(--line);
+}
+.draw-tools,
+.draw-options {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.color-dot {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0 10px, transparent 10.5px);
+  cursor: pointer;
+}
+.color-dot.on {
+  box-shadow: inset 0 0 0 2.5px var(--c);
+}
+.size-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.size-dot span {
+  border-radius: 50%;
+}
+.size-dot.on {
+  background: var(--desk);
+}

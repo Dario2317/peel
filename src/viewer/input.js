@@ -29,7 +29,7 @@ export class GestureController {
    *   getCamera(), setCamera(cam), clampScale(scale),
    *   onGestureStart(), onGestureEnd(),
    *   onTap({ x, y, pointerType, target }), onUndo(), onRedo(),
-   *   onPencilSeen(),
+   *   onPencilSeen(), onHover(event | null)  (Pencil hovering, iPad Pro/Air M2+)
    *   routePointer(event) -> 'navigate' | { move(e), up(e), cancel() }
    * }
    */
@@ -57,6 +57,8 @@ export class GestureController {
       gestureend: this.onSafariGesture.bind(this),
       touchstart: this.onTouchStart.bind(this),
       contextmenu: (e) => e.preventDefault(),
+      // The Pencil moved away from the screen: hide the hover dot.
+      pointerleave: (e) => e.pointerType === 'pen' && this.o.onHover?.(null),
     };
     for (const [name, fn] of Object.entries(this.handlers)) {
       element.addEventListener(name, fn, { passive: false });
@@ -76,6 +78,7 @@ export class GestureController {
     if (!this.o.getCamera()) return; // not laid out yet
     if (e.pointerType === 'pen') {
       this.o.onPencilSeen?.();
+      this.o.onHover?.(null);
       this.penDown = true;
       this.rejectPalm();
     } else if (e.pointerType === 'touch') {
@@ -140,6 +143,7 @@ export class GestureController {
     if (e.pointerType === 'touch') this.lastTouchAt = performance.now();
     if (e.pointerType === 'pen' && e.buttons === 0) {
       this.o.onPencilSeen?.(); // Pencil hovering above the screen
+      this.o.onHover?.(e);
       return;
     }
     const tool = this.tools.get(e.pointerId);

@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { useItem } from '../state/useAnnotations.js';
-import { PostItCard } from './PostItCard.jsx';
+import { NoteBoard } from '../board/NoteBoard.jsx';
 import { TapeOptions } from './TapeOptions.jsx';
 
 /**
- * The panel for the selected item: an opened post-it, or tape options.
+ * What opens when you tap an item: a post-it opens its full-screen board,
+ * a tape shows its options next to it.
  *   selected: { pageId, itemId, startTyping }
  */
 export function SelectedItemPanel({ store, viewport, pageIndex, selected, mode, onClose, onTapeStyleUsed, onPostItColorUsed }) {
@@ -18,17 +19,10 @@ export function SelectedItemPanel({ store, viewport, pageIndex, selected, mode, 
   if (!item || pageIndex < 0 || !viewport) return null;
 
   if (item.type === 'postit') {
-    const rect = viewport.layout.rects[pageIndex];
-    const anchor = {
-      index: pageIndex,
-      rect: { x: item.x, y: item.y, w: item.size, h: (item.size * rect.w) / rect.h },
-    };
     return (
-      <PostItCard
+      <NoteBoard
         key={item.id}
         store={store}
-        viewport={viewport}
-        anchor={anchor}
         pageId={selected.pageId}
         itemId={item.id}
         editable={mode === 'edit'}

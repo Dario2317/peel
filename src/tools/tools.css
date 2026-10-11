@@ -115,125 +115,13 @@
   border-color: var(--ink);
 }
 
-/* --- Panels attached to an item (post-it card, tape options) ----------- */
+/* --- Panel attached to a tape (tape options) ---------------------------- */
 
 .popover {
   position: fixed;
   top: 0;
   left: 0;
   z-index: 70;
-}
-
-.postit-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 6px 0;
-  border-radius: 3px;
-  background: linear-gradient(170deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 35%), var(--note);
-  box-shadow: 0 14px 40px rgba(40, 25, 10, 0.3), 0 2px 6px rgba(40, 25, 10, 0.2);
-  animation: card-in 0.18s ease-out;
-  transform-origin: 0 0;
-}
-@keyframes card-in {
-  from {
-    opacity: 0;
-    scale: 0.6;
-  }
-}
-.card-bar {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 2px;
-  padding: 0 2px;
-}
-.card-bar .spacer {
-  flex: 1;
-}
-.card-bar .swatch {
-  width: 24px;
-  height: 24px;
-  margin: 0 4px;
-}
-.ink-swatch {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--ink) 0 7px, transparent 7.5px);
-  cursor: pointer;
-}
-.ink-swatch.on {
-  box-shadow: inset 0 0 0 2px var(--ink);
-}
-.note-colors {
-  flex: 0 0 auto;
-  padding: 4px 6px;
-}
-
-/* The writing area inside an open note */
-.note-body {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  margin: 0 -6px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-top: 1px solid rgba(60, 45, 20, 0.12);
-}
-.note-body.drawing {
-  touch-action: none; /* we handle the Pencil and fingers ourselves */
-  cursor: crosshair;
-}
-.note-body.erasing {
-  cursor: cell;
-}
-.note-sheet {
-  position: relative;
-}
-.note-text {
-  display: block;
-  width: 100%;
-  margin: 0;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  color: #2b2620;
-  font: 17px/1.45 system-ui, -apple-system, sans-serif;
-  white-space: pre-wrap;
-  word-break: break-word;
-  outline: none;
-  resize: none;
-  overflow: hidden;
-}
-.note-text.editing {
-  min-height: 3em;
-  background: rgba(255, 255, 255, 0.35);
-}
-.note-ink,
-.note-wet {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-}
-.postit-card.read-only .note-body {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Drag this corner to make the note bigger */
-.card-resize {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(135deg, transparent 50%, rgba(60, 45, 20, 0.25) 50% 56%, transparent 56% 66%, rgba(60, 45, 20, 0.25) 66% 72%, transparent 72%);
-  cursor: nwse-resize;
-  touch-action: none;
 }
 
 .tape-options {
