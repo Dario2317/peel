@@ -4,7 +4,7 @@ import { colorValue, POSTIT_COLORS, tiltFor } from './looks.js';
 // A closed post-it: a small see-through note pinned to the page. It keeps
 // the same size on screen at every zoom (CSS divides by --zoom), so it's
 // always easy to tap and never covers half the page. Tap it to open its board.
-export const PostIt = memo(function PostIt({ item, pageId, pageHeight, open }) {
+export const PostIt = memo(function PostIt({ item, pageId, pageHeight, open, offset }) {
   return (
     <div
       className={`postit ${open ? 'open' : ''}`}
@@ -13,13 +13,14 @@ export const PostIt = memo(function PostIt({ item, pageId, pageHeight, open }) {
       role="button"
       aria-label="Note"
       style={{
-        left: item.x * 1000,
-        top: item.y * pageHeight,
+        left: item.x * 1000 + (offset?.dx ?? 0),
+        top: item.y * pageHeight + (offset?.dy ?? 0),
         '--note': colorValue(POSTIT_COLORS, item.color),
         '--tilt': `${tiltFor(item.id)}deg`,
       }}
     >
       <div className="postit-paper" />
+      {item.link && <span className="postit-link" title={item.link.name}>↗</span>}
     </div>
   );
 });

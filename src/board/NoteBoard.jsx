@@ -19,7 +19,8 @@ import { clamp } from '../utils/platform.js';
 import { getSetting, setSetting } from '../db/settings.js';
 import { BoardContent } from './BoardContent.jsx';
 import { ZoomWindow } from './ZoomWindow.jsx';
-import { CheckIcon, PaletteIcon, RedoIcon, TrashIcon, UndoIcon, ZoomWindowIcon } from '../ui/icons.jsx';
+import { LinkMenu, openLink } from './LinkMenu.jsx';
+import { CheckIcon, LinkIcon, PaletteIcon, RedoIcon, TrashIcon, UndoIcon, ZoomWindowIcon } from '../ui/icons.jsx';
 import './board.css';
 
 const GRID = 24; // distance between the dots, in board units
@@ -587,9 +588,22 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
         <button className="button small" onClick={onClose}>
           <CheckIcon size={18} /> Done
         </button>
+        {item.link && (
+          <button className="link-chip" onClick={() => openLink(item.link)} title={item.link.url}>
+            ↗ {item.link.name}
+          </button>
+        )}
         <div className="spacer" />
         {editable && (
           <>
+            <button
+              className={`icon-button ${menu === 'link' ? 'on' : ''}`}
+              onClick={() => setMenu(menu === 'link' ? null : 'link')}
+              aria-label="Link"
+              title="Link to a Freeform board (or any page)"
+            >
+              <LinkIcon />
+            </button>
             <button className="icon-button" onClick={() => store.undo()} disabled={!canUndo} aria-label="Undo" title="Undo">
               <UndoIcon />
             </button>
@@ -624,6 +638,13 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
               <TrashIcon />
             </button>
           </>
+        )}
+        {menu === 'link' && (
+          <LinkMenu
+            link={item.link}
+            onSave={(link) => edit.discrete({ link: link ?? undefined })}
+            onClose={() => setMenu(null)}
+          />
         )}
         {menu === 'look' && (
           <div className="board-menu look">

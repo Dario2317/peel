@@ -8,9 +8,9 @@ const HANDLES = ['nw', 'ne', 'sw', 'se'];
  *   state: 'edit' | 'hidden' | 'current' | 'peeling' | 'got' | 'missed'
  *          (all but 'edit' are study mode)
  */
-export const Tape = memo(function Tape({ item, pageId, pageHeight, state, peek, selected, handleSize }) {
-  const left = item.x * 1000;
-  const top = item.y * pageHeight;
+export const Tape = memo(function Tape({ item, pageId, pageHeight, state, peek, selected, handleSize, offset }) {
+  const left = item.x * 1000 + (offset?.dx ?? 0);
+  const top = item.y * pageHeight + (offset?.dy ?? 0);
   const width = item.w * 1000;
   const height = item.h * pageHeight;
   const shape = tornTapeShape(width, height, item.seed);

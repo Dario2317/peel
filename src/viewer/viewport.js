@@ -200,6 +200,19 @@ export class Viewport {
     return { index: i, pageId: this.pageIds[i], x: (wx - r.x) / r.w, y: (wy - r.y) / r.h, rect: r };
   }
 
+  // Like clientToPage, but outside the pages (margins, gaps) it picks the
+  // nearest page, so you can start writing in the margin.
+  clientToNearestPage(clientX, clientY) {
+    if (!this.ready || !this.layout.rects.length) return null;
+    const box = this.container.getBoundingClientRect();
+    const wy = (clientY - box.top - this.camera.y) / this.camera.scale;
+    const { rects } = this.layout;
+    let index = pageIndexAt(rects, wy);
+    // In the gap above this page? The previous page may be closer.
+    if (index > 0 && wy < rects[index].y && wy - (rects[index - 1].y + rects[index - 1].h) < rects[index].y - wy) index -= 1;
+    return this.clientToPage(clientX, clientY, index);
+  }
+
   // A rectangle on a page (fractions) → where it is on screen (client px).
   pageRectToClient(index, rect) {
     const r = this.layout.rects[index];

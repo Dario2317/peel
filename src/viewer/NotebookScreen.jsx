@@ -25,9 +25,11 @@ import { Menu } from '../ui/Menu.jsx';
 import {
   BackIcon, CropIcon, FitWidthIcon, ImportIcon, PageIcon, PagesIcon, PasteIcon, PlusIcon, StudyIcon,
 } from '../ui/icons.jsx';
+import { useInkTool } from '../ink/useInkTool.js';
+import { HIGHLIGHT_OPACITY } from '../ink/inkStyle.js';
+import { deleteSelection } from '../tools/pageDrawing.js';
+import { TrashIcon } from '../ui/icons.jsx';
 import '../styles/viewer.css';
-
-
 
 export function NotebookScreen({ notebookId, onBack }) {
   const notebook = useLiveQuery(async () => (await db.notebooks.get(notebookId)) ?? null, [notebookId]);
@@ -49,7 +51,10 @@ export function NotebookScreen({ notebookId, onBack }) {
 
   // Editing state
   const [mode, setMode] = useState('edit'); // 'edit' | 'study'
-  const [tool, setTool] = useState('select'); // 'select' | 'postit' | 'tape'
+  // 'select' (Move) | 'pen' | 'highlighter' | 'eraser' | 'lasso' | 'postit' | 'tape'
+  const [tool, setTool] = useState('select');
+  const [ink, setInk] = useInkTool(); // pen colors, sizes, smoothing
+  const [lasso, setLasso] = useState(null); // lasso selection: { pageId, ids, box, dx, dy }
   const [tapeStyle, setTapeStyle] = useState({ color: 'mint', pattern: 'stripes' });
   const [postItColor, setPostItColor] = useState('yellow');
   const [peek, setPeek] = useState(false);
@@ -75,7 +80,7 @@ export function NotebookScreen({ notebookId, onBack }) {
 
   // --- Actions (kept in a ref so the tool router always sees the latest) ---
   const latest = useRef({});
-  latest.current = { mode, tool, tapeStyle, postItColor, selected, pages, study };
+  latest.current = { mode, tool, tapeStyle, postItColor, selected, pages, study, ink, lasso };
 
   const actions = {
     tapItem(pageId, itemId, pointerType) {
@@ -126,6 +131,15 @@ export function NotebookScreen({ notebookId, onBack }) {
         getState: () => latest.current,
         getViewport: () => viewerRef.current?.viewport,
         store,
+        // What drawing on the pages needs (see tools/pageDrawing.js).
+        drawing: () => ({
+          store,
+          viewport: viewerRef.current.viewport,
+          wet: viewerRef.current.wet,
+          getState: () => latest.current,
+          showCursor: (x, y) => viewerRef.current?.showCursor(x, y),
+          setLasso,
+        }),
         actions: {
           tapItem: (...args) => actions.tapItem(...args),
           tapEmpty: (...args) => actions.tapEmpty(...args),
@@ -157,6 +171,11 @@ export function NotebookScreen({ notebookId, onBack }) {
         redo();
       } else if (e.key === 'Escape') {
         setSelected(null);
+        setLasso(null);
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing && latest.current.lasso) {
+        e.preventDefault();
+        deleteSelection(store, latest.current.lasso);
+        setLasso(null);
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing) {
         const sel = latest.current.selected;
         const item = sel && store.getItem(sel.pageId, sel.itemId);
@@ -176,6 +195,19 @@ export function NotebookScreen({ notebookId, onBack }) {
   const chooseTool = (t) => {
     setTool(t);
     setSetting('tool', t);
+    setLasso(null);
+    viewerRef.current?.showCursor(null);
+  };
+
+  // What the Pencil hover dot looks like for the current tool.
+  const cursorFor = () => {
+    const { mode, tool, ink } = latest.current;
+    if (mode !== 'edit') return null;
+    const scale = viewerRef.current?.viewport.getCamera()?.scale ?? 1;
+    if (tool === 'pen') return { diameter: ink.penSize * scale, color: ink.penColor };
+    if (tool === 'highlighter') return { diameter: ink.highlightSize * scale, color: ink.highlightColor + Math.round(HIGHLIGHT_OPACITY * 255).toString(16) };
+    if (tool === 'eraser') return { eraser: true };
+    return null;
   };
   const chooseTapeStyle = (style) => {
     setTapeStyle(style);
@@ -189,6 +221,7 @@ export function NotebookScreen({ notebookId, onBack }) {
   // --- Study ----------------------------------------------------------------
   const startStudy = async (scope, onlyTapeIds = null) => {
     setSelected(null);
+    setLasso(null);
     setShowPages(false);
     if (await study.start(scope, Math.min(currentIndex, (pages?.length ?? 1) - 1), onlyTapeIds)) setMode('study');
   };
@@ -203,8 +236,8 @@ export function NotebookScreen({ notebookId, onBack }) {
   const revealedQuestion = revealedEntry ? store?.getItem(revealedEntry.pageId, revealedEntry.tapeId)?.question : '';
 
   const overlay = useMemo(
-    () => store && { store, mode, peek, selected, study: s },
-    [store, mode, peek, selected, s],
+    () => store && { store, mode, peek, selected, study: s, lasso },
+    [store, mode, peek, selected, s, lasso],
   );
 
   if (!notebook || !pages || initialView === undefined || !store) return <div className="notebook" />;
@@ -317,6 +350,7 @@ export function NotebookScreen({ notebookId, onBack }) {
           initialView={initialView}
           overlay={overlay}
           routePointer={router.routePointer}
+          cursorFor={cursorFor}
           onTap={router.onTap}
           onUndo={undo}
           onRedo={redo}
@@ -352,6 +386,8 @@ export function NotebookScreen({ notebookId, onBack }) {
             tool={tool}
             onTool={chooseTool}
             store={store}
+            ink={ink}
+            onInk={setInk}
             peek={peek}
             onPeek={() => setPeek(!peek)}
             tapeStyle={tapeStyle}
@@ -361,6 +397,24 @@ export function NotebookScreen({ notebookId, onBack }) {
             onUndo={undo}
             onRedo={redo}
           />
+        )}
+
+        {editing && lasso && !lasso.dx && !lasso.dy && (
+          <div className="selection-bar page">
+            <span>{lasso.ids.size} selected · drag to move</span>
+            <button
+              className="button small"
+              onClick={() => {
+                deleteSelection(store, lasso);
+                setLasso(null);
+              }}
+            >
+              <TrashIcon size={16} /> Delete
+            </button>
+            <button className="button small" onClick={() => setLasso(null)}>
+              Done
+            </button>
+          </div>
         )}
 
         {!editing && s && !s.finished && (

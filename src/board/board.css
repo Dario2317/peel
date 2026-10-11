@@ -71,10 +71,37 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   animation: pop-in 0.12s ease-out;
 }
-.board-menu.look {
+.board-menu.look,
+.board-menu.link {
   top: 100%;
   right: 10px;
-  width: min(330px, calc(100vw - 20px));
+  width: min(340px, calc(100vw - 20px));
+}
+.link-warning {
+  color: var(--danger);
+  font-size: 13px;
+}
+/* The note's link (e.g. a Freeform board), next to Done */
+.link-chip {
+  max-width: 40vw;
+  min-height: 34px;
+  margin-left: 6px;
+  padding: 0 12px;
+  overflow: hidden;
+  border: none;
+  border-radius: 999px;
+  background: #e8f0ff;
+  color: #1f5fbf;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bg-black .link-chip {
+  background: #1f3355;
+  color: #a9c8ff;
 }
 .menu-label {
   font-size: 12px;

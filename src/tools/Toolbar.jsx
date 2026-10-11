@@ -1,20 +1,28 @@
 import { useState } from 'react';
 import { useHistoryState } from '../state/useAnnotations.js';
 import { colorValue, POSTIT_COLORS, TAPE_COLORS, TAPE_PATTERNS, tapeBackground } from '../overlay/looks.js';
-import { EyeIcon, HandIcon, NoteIcon, RedoIcon, TapeIcon, UndoIcon } from '../ui/icons.jsx';
+import { DrawingOptions } from '../ink/DrawingToolbar.jsx';
+import {
+  EraserIcon, EyeIcon, HandIcon, HighlighterIcon, LassoIcon, NoteIcon, PenIcon, RedoIcon, TapeIcon, UndoIcon,
+} from '../ui/icons.jsx';
 import './tools.css';
 
-// The edit toolbar at the bottom of the screen. One tap switches tool; tap
-// the active tool again to choose its color/pattern.
+/**
+ * The edit toolbar at the bottom of the pages. One tap switches tool:
+ *   Move, Pen, Marker, Eraser, Lasso | Post-it, Tape | Undo, Redo | Peek
+ * The pen and marker show their colors/sizes above the toolbar; tap
+ * Post-it or Tape again for their colors.
+ *   ink / onInk: pen settings from useInkTool()
+ */
 export function Toolbar({
-  tool, onTool, store, peek, onPeek,
+  tool, onTool, store, peek, onPeek, ink, onInk,
   tapeStyle, onTapeStyle, postItColor, onPostItColor, onUndo, onRedo,
 }) {
   const { canUndo, canRedo } = useHistoryState(store);
   const [options, setOptions] = useState(null); // 'tape' | 'postit' | null
 
   const choose = (id) => {
-    if (id === tool && id !== 'select') setOptions(options === id ? null : id);
+    if (id === tool && (id === 'tape' || id === 'postit')) setOptions(options === id ? null : id);
     else {
       onTool(id);
       setOptions(null);
@@ -34,8 +42,15 @@ export function Toolbar({
     </button>
   );
 
+  const drawing = tool === 'pen' || tool === 'highlighter';
+
   return (
     <div className="toolbar-wrap">
+      {drawing && (
+        <div className="tool-options">
+          <DrawingOptions ink={ink} onInk={onInk} tool={tool} />
+        </div>
+      )}
       {options === 'tape' && (
         <div className="tool-options">
           <div className="swatches">
@@ -81,6 +96,11 @@ export function Toolbar({
 
       <div className="toolbar" role="toolbar" aria-label="Tools">
         {toolButton('select', 'Move', <HandIcon />)}
+        {toolButton('pen', 'Pen', <PenIcon />, { background: ink.penColor })}
+        {toolButton('highlighter', 'Marker', <HighlighterIcon />, { background: ink.highlightColor })}
+        {toolButton('eraser', 'Eraser', <EraserIcon />)}
+        {toolButton('lasso', 'Lasso', <LassoIcon />)}
+        <span className="toolbar-sep" />
         {toolButton('postit', 'Post-it', <NoteIcon />, { background: colorValue(POSTIT_COLORS, postItColor) })}
         {toolButton('tape', 'Tape', <TapeIcon />, tapeBackground(tapeStyle.color, tapeStyle.pattern))}
         <span className="toolbar-sep" />

@@ -1,4 +1,5 @@
 // Decides what a press on the pages does in edit mode, and runs it:
+//   - pen, marker, eraser, lasso: draw on the page (see pageDrawing.js)
 //   - on a tape or post-it: drag it to move it (a tap opens it)
 //   - on a tape's corner handle: resize the tape
 //   - with the tape tool on the page: drag to lay down a new tape
@@ -11,14 +12,17 @@ import { newId } from '../utils/ids.js';
 import { clamp } from '../utils/platform.js';
 import { pencil } from '../viewer/pencil.js';
 import { NOTE_MARKER_PX } from '../overlay/looks.js';
+import { pageDrawingHandler } from './pageDrawing.js';
 
 const DRAG_SLOP = 4; // px the Pencil/mouse may move and still count as a tap
+const DRAWING_TOOLS = new Set(['pen', 'highlighter', 'eraser', 'lasso']);
 const MIN_TAPE = { width: 12, height: 6 }; // page units (a page is 1000 wide)
 
 /**
  * ctx: {
- *   getState() -> { mode, tool, tapeStyle },
+ *   getState() -> { mode, tool, tapeStyle, ink, lasso },
  *   getViewport(), store,
+ *   drawing() -> what pageDrawing.js needs (viewport, wet ink, setLasso…),
  *   actions: { tapItem(pageId, itemId, pointerType), tapEmpty({ x, y, pointerType }) }
  * }
  * Returns { routePointer(e), onTap(info) } for the Viewer.
@@ -33,6 +37,15 @@ export function createToolRouter(ctx) {
 
     const viewport = ctx.getViewport();
     const itemEl = e.target.closest?.('[data-item-id]');
+
+    // Pen, marker, eraser, lasso: draw on the page (tapping a post-it pin
+    // with the pen or marker still opens it).
+    if (DRAWING_TOOLS.has(tool)) {
+      const pin = e.target.closest?.('.postit[data-item-id]');
+      if (pin && (tool === 'pen' || tool === 'highlighter')) return tapOnly(e, pin.dataset.pageId, pin.dataset.itemId);
+      return pageDrawingHandler(e, ctx.drawing());
+    }
+
     if (itemEl) {
       const { pageId, itemId } = itemEl.dataset;
       const handle = e.target.closest('[data-handle]')?.dataset.handle;
@@ -50,6 +63,21 @@ export function createToolRouter(ctx) {
     const itemEl = target?.closest?.('[data-item-id]');
     if (itemEl) ctx.actions.tapItem(itemEl.dataset.pageId, itemEl.dataset.itemId, pointerType);
     else ctx.actions.tapEmpty({ x, y, pointerType });
+  }
+
+  // Only reacts to a tap (no drag): used for post-its with a drawing tool.
+  function tapOnly(e, pageId, itemId) {
+    const start = { x: e.clientX, y: e.clientY };
+    let moved = false;
+    return {
+      move(ev) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > DRAG_SLOP) moved = true;
+      },
+      up(ev) {
+        if (!moved) ctx.actions.tapItem(pageId, itemId, ev.pointerType);
+      },
+      cancel() {},
+    };
   }
 
   // Size of an item as fractions of the page. A post-it pin has a fixed

@@ -16,14 +16,14 @@ What's done, what's next, and requests to remember.
   to draw on with the Pencil (pen, marker, eraser, smoothing), scroll and
   zoom (zoom pill bottom-left), text boxes you can place anywhere, shapes
   (hold still to snap ovals, rectangles, lines, arrows), lasso to move or
-  delete, and a zoom window to write small precisely.
+  delete, a zoom window to write small precisely, and a link with a name
+  (e.g. to a Freeform board).
+- **Milestone 3** — draw directly on the pages: pen, marker, eraser, 8
+  colors, 3 sizes, smoothing, Pencil hover dot, shapes (hold to snap), lasso
+  to move or delete ink, tapes and post-its; ink can run past the page edge.
 
 ## Next
 
-- **Milestone 3** — draw directly on the pages: pen, highlighter, eraser,
-  colors, sizes, Pencil hover dot. Strokes may go past the edge of the page
-  into the margin and must not be cut off. Select tool to move/resize/delete
-  anything.
 - **Milestone 4** — text boxes anywhere on the page, ~8 bundled fonts
   (some handwritten), size/color/bold/italic, same options inside post-its.
 - **Milestone 5** — backup & export:
@@ -38,8 +38,6 @@ What's done, what's next, and requests to remember.
 
 - **Zoom window on the pages** (already on the post-it boards): a box on the
   page and a big writing area at the bottom, for precise small handwriting.
-- **Freeform links (idea)**: a post-it could hold a link to a real Freeform
-  board and open the Freeform app (Freeform can't be shown inside Peel).
 - **iPadOS three-finger undo bar**: not possible for a web app (the system
   only connects it to text fields). Peel uses two-finger tap = undo,
   three-finger tap = redo, plus on-screen buttons.

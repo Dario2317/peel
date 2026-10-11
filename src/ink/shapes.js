@@ -110,10 +110,41 @@ export function recognizeShape(flatPoints) {
       const tailLength = pathLength(tail);
       const [x2, y2] = snapLine(start, tip);
       if (tailLength < shaft * 0.08) return { kind: 'line', x1: start[0], y1: start[1], x2, y2 };
-      if (tail.every((p) => dist(p, tip) < shaft * 0.6)) return { kind: 'arrow', x1: start[0], y1: start[1], x2, y2 };
+      // The head can be big and wide: it just has to stay around the tip.
+      if (tail.every((p) => dist(p, tip) < Math.max(shaft * 0.95, 40))) {
+        const head = measureHead([x2, y2], [start[0] - x2, start[1] - y2], tail);
+        if (head) return { kind: 'arrow', x1: start[0], y1: start[1], x2, y2, ...head };
+      }
     }
   }
   return recognizeChevron(pts);
+}
+
+/**
+ * How long and how wide the arrow head you drew is, so the clean arrow
+ * looks like yours: { head: length, spread: angle of the barbs in degrees }.
+ *   tip: the arrow's point; back: direction from the tip back along the line
+ */
+function measureHead(tip, back, points) {
+  const length = Math.hypot(back[0], back[1]) || 1;
+  const bx = back[0] / length;
+  const by = back[1] / length;
+  const sides = { left: null, right: null }; // the farthest point on each side of the line
+  for (const p of points) {
+    const vx = p[0] - tip[0];
+    const vy = p[1] - tip[1];
+    const along = vx * bx + vy * by; // how far back along the line
+    const across = bx * vy - by * vx; // how far to the side (+/-)
+    const d = Math.hypot(vx, vy);
+    if (along <= 0 || d < 6) continue;
+    const side = across >= 0 ? 'left' : 'right';
+    if (!sides[side] || d > sides[side].d) sides[side] = { d, angle: Math.atan2(Math.abs(across), along) };
+  }
+  const found = [sides.left, sides.right].filter(Boolean);
+  if (!found.length) return null;
+  const head = found.reduce((sum, s) => sum + s.d, 0) / found.length;
+  const spread = (found.reduce((sum, s) => sum + s.angle, 0) / found.length) * (180 / Math.PI);
+  return { head, spread: Math.min(75, Math.max(15, spread)) };
 }
 
 // A "V": two straight arms meeting at a sharp corner (an arrow head).
@@ -152,22 +183,28 @@ function recognizeChevron(pts) {
 export function arrowFromChevron(chevron, strokes) {
   const reach = Math.max(24, Math.max(dist([chevron.ax, chevron.ay], [chevron.vx, chevron.vy]), dist([chevron.bx, chevron.by], [chevron.vx, chevron.vy])) * 0.9);
   const vertex = [chevron.vx, chevron.vy];
+  const arms = [[chevron.ax, chevron.ay], [chevron.bx, chevron.by]];
   for (const s of strokes.slice(-4).reverse()) {
     const line = s.shape?.kind === 'line' ? s.shape : !s.shape ? recognizeShape(s.points) : null;
     if (line?.kind !== 'line') continue;
     const a = [line.x1, line.y1];
     const b = [line.x2, line.y2];
-    if (dist(b, vertex) < reach) return { strokeId: s.id, shape: { kind: 'arrow', x1: a[0], y1: a[1], x2: b[0], y2: b[1] } };
-    if (dist(a, vertex) < reach) return { strokeId: s.id, shape: { kind: 'arrow', x1: b[0], y1: b[1], x2: a[0], y2: a[1] } };
+    let from = null;
+    let to = null;
+    if (dist(b, vertex) < reach) [from, to] = [a, b];
+    else if (dist(a, vertex) < reach) [from, to] = [b, a];
+    if (!to) continue;
+    const head = measureHead(to, [from[0] - to[0], from[1] - to[1]], arms) ?? {};
+    return { strokeId: s.id, shape: { kind: 'arrow', x1: from[0], y1: from[1], x2: to[0], y2: to[1], ...head } };
   }
   return null;
 }
 
-// The two short lines of an arrow head.
-function arrowHead({ x1, y1, x2, y2 }, size) {
+// The two short lines of an arrow head (as drawn, or a standard one).
+function arrowHead({ x1, y1, x2, y2, head, spread: drawnSpread }, size) {
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  const length = Math.min(Math.max(Math.hypot(x2 - x1, y2 - y1) * 0.22, 12 + size * 2), 40 + size * 2);
-  const spread = (28 * Math.PI) / 180;
+  const length = head ?? Math.min(Math.max(Math.hypot(x2 - x1, y2 - y1) * 0.22, 12 + size * 2), 40 + size * 2);
+  const spread = ((drawnSpread ?? 28) * Math.PI) / 180;
   return [
     [x2 - Math.cos(angle - spread) * length, y2 - Math.sin(angle - spread) * length],
     [x2 - Math.cos(angle + spread) * length, y2 - Math.sin(angle + spread) * length],

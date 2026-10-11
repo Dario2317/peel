@@ -4,6 +4,18 @@
 .overlay {
   position: absolute;
   inset: 0;
+  /* Above every page's picture, so ink that runs into the margin or onto
+     the next page stays visible. */
+  z-index: 1;
+}
+
+/* Lasso selection on a page */
+.page-selection {
+  position: absolute;
+  border: calc(1.5px / var(--zoom, 1)) dashed var(--accent);
+  border-radius: calc(4px / var(--zoom, 1));
+  background: rgba(217, 90, 67, 0.06);
+  pointer-events: none;
 }
 
 /* --- Tape -------------------------------------------------------------- */
@@ -158,6 +170,20 @@
   padding: 18% 12% 26%;
   /* Cut the bottom-right corner off… */
   clip-path: polygon(0 0, 100% 0, 100% 74%, 74% 100%, 0 100%);
+}
+/* This note has a link (e.g. to a Freeform board) */
+.postit-link {
+  position: absolute;
+  top: calc(-7px / var(--zoom, 1));
+  right: calc(-7px / var(--zoom, 1));
+  width: calc(16px / var(--zoom, 1));
+  height: calc(16px / var(--zoom, 1));
+  border-radius: 50%;
+  background: #1f5fbf;
+  color: #fff;
+  font: 700 calc(11px / var(--zoom, 1)) / calc(16px / var(--zoom, 1)) system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
 }
 /* …and show it folded over. */
 .postit::after {

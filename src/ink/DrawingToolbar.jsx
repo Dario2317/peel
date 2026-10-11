@@ -3,17 +3,12 @@ import { EraserIcon, HighlighterIcon, KeyboardIcon, LassoIcon, PenIcon } from '.
 import './ink.css';
 
 /**
- * Drawing tools: pen, highlighter, eraser (and optionally "type"), with the
- * colors and sizes of the current tool. One tap to switch.
+ * Drawing tools for the post-it boards: pen, marker, eraser, lasso (and
+ * optionally "type"), with the colors and sizes of the current tool.
  *   ink / onInk: from useInkTool()
  *   typing / onTyping: optional keyboard mode
  */
 export function DrawingToolbar({ ink, onInk, typing = false, onTyping }) {
-  const highlighter = ink.tool === 'highlighter';
-  const colors = highlighter ? HIGHLIGHT_COLORS : PEN_COLORS;
-  const sizes = highlighter ? HIGHLIGHT_SIZES : PEN_SIZES;
-  const color = highlighter ? ink.highlightColor : ink.penColor;
-  const size = highlighter ? ink.highlightSize : ink.penSize;
   const showOptions = !typing && (ink.tool === 'pen' || ink.tool === 'highlighter');
 
   const pick = (tool) => {
@@ -46,43 +41,57 @@ export function DrawingToolbar({ ink, onInk, typing = false, onTyping }) {
           </button>
         )}
       </div>
-      {showOptions && (
-        <div className="draw-options">
-          {colors.map((c) => (
-            <button
-              key={c}
-              className={`color-dot ${c === color ? 'on' : ''}`}
-              style={{ '--c': c }}
-              aria-label={`Color ${c}`}
-              onClick={() => onInk(highlighter ? { highlightColor: c } : { penColor: c })}
-            />
-          ))}
-          <span className="toolbar-sep" />
-          {sizes.map((s, i) => (
-            <button
-              key={s}
-              className={`size-dot ${s === size ? 'on' : ''}`}
-              aria-label={['Thin', 'Medium', 'Thick'][i]}
-              onClick={() => onInk(highlighter ? { highlightSize: s } : { penSize: s })}
-            >
-              <span style={{ width: 5 + i * 5, height: 5 + i * 5, background: color }} />
-            </button>
-          ))}
-          <span className="toolbar-sep" />
-          {/* How much the line is smoothed out (0 = exactly as drawn) */}
-          <label className="smooth-control" title="Smoothing">
-            <span>Smooth</span>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={ink.smoothing}
-              onChange={(e) => onInk({ smoothing: Number(e.target.value) })}
-            />
-          </label>
-        </div>
-      )}
+      {showOptions && <DrawingOptions ink={ink} onInk={onInk} tool={ink.tool} />}
+    </div>
+  );
+}
+
+/**
+ * Colors, sizes and smoothing for the pen or the marker.
+ *   tool: 'pen' | 'highlighter'
+ */
+export function DrawingOptions({ ink, onInk, tool }) {
+  const highlighter = tool === 'highlighter';
+  const colors = highlighter ? HIGHLIGHT_COLORS : PEN_COLORS;
+  const sizes = highlighter ? HIGHLIGHT_SIZES : PEN_SIZES;
+  const color = highlighter ? ink.highlightColor : ink.penColor;
+  const size = highlighter ? ink.highlightSize : ink.penSize;
+
+  return (
+    <div className="draw-options">
+      {colors.map((c) => (
+        <button
+          key={c}
+          className={`color-dot ${c === color ? 'on' : ''}`}
+          style={{ '--c': c }}
+          aria-label={`Color ${c}`}
+          onClick={() => onInk(highlighter ? { highlightColor: c } : { penColor: c })}
+        />
+      ))}
+      <span className="toolbar-sep" />
+      {sizes.map((s, i) => (
+        <button
+          key={s}
+          className={`size-dot ${s === size ? 'on' : ''}`}
+          aria-label={['Thin', 'Medium', 'Thick'][i]}
+          onClick={() => onInk(highlighter ? { highlightSize: s } : { penSize: s })}
+        >
+          <span style={{ width: 5 + i * 5, height: 5 + i * 5, background: color }} />
+        </button>
+      ))}
+      <span className="toolbar-sep" />
+      {/* How much the line is smoothed out (0 = exactly as drawn) */}
+      <label className="smooth-control" title="Smoothing">
+        <span>Smooth</span>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={ink.smoothing}
+          onChange={(e) => onInk({ smoothing: Number(e.target.value) })}
+        />
+      </label>
     </div>
   );
 }

@@ -52,11 +52,24 @@ describe('recognizeShape', () => {
     expect(recognizeShape(stroke([...shaft, ...head], 1)).kind).toBe('arrow');
   });
 
+  it('recognizes a wide, big arrow head (about 50°) and keeps its shape', () => {
+    const tip = [150, 100];
+    const barb = (sign) => [tip[0] - Math.cos((50 * Math.PI) / 180) * 70, tip[1] + sign * Math.sin((50 * Math.PI) / 180) * 70];
+    const lower = barb(1);
+    const upper = barb(-1);
+    const points = [...along([[10, 100], tip], 30), ...along([tip, lower], 10), ...along([lower, tip], 10), ...along([tip, upper], 10), upper];
+    const shape = recognizeShape(stroke(points, 0.8));
+    expect(shape.kind).toBe('arrow');
+    expect(shape.spread).toBeGreaterThan(42);
+    expect(shape.spread).toBeLessThan(58);
+    expect(shape.head).toBeGreaterThan(55);
+  });
+
   it('recognizes an arrow head drawn on its own, and joins it to the line', () => {
     const v = recognizeShape(stroke([...along([[270, 80], [300, 100]], 8), ...along([[300, 100], [270, 120]], 8), [270, 120]], 0.5));
     expect(v.kind).toBe('chevron');
     const line = { id: 'l', shape: { kind: 'line', x1: 10, y1: 100, x2: 298, y2: 100 }, points: [] };
-    expect(arrowFromChevron(v, [line])).toEqual({ strokeId: 'l', shape: { kind: 'arrow', x1: 10, y1: 100, x2: 298, y2: 100 } });
+    expect(arrowFromChevron(v, [line])).toMatchObject({ strokeId: 'l', shape: { kind: 'arrow', x1: 10, y1: 100, x2: 298, y2: 100 } });
   });
 
   it('leaves scribbles and handwriting alone', () => {

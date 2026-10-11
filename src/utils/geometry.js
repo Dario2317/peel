@@ -31,6 +31,15 @@ export function remapItemsForCrop(items, oldCrop, newCrop) {
         i % 3 === 0 ? mapX(value) : i % 3 === 1 ? mapY(value) : value,
       );
     }
+    if (item.shape) {
+      // A clean shape (oval, rectangle, line, arrow…) on a page.
+      const shape = { ...item.shape };
+      for (const k of ['x', 'x1', 'x2', 'cx', 'ax', 'vx', 'bx']) if (k in shape) shape[k] = mapX(shape[k]);
+      for (const k of ['y', 'y1', 'y2', 'cy', 'ay', 'vy', 'by']) if (k in shape) shape[k] = mapY(shape[k]);
+      for (const k of ['w', 'rx', 'head']) if (k in shape) shape[k] *= scaleW;
+      for (const k of ['h', 'ry']) if (k in shape) shape[k] *= scaleH;
+      out.shape = shape;
+    }
     return out;
   });
 }

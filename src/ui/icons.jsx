@@ -133,6 +133,12 @@ export const HighlighterIcon = (p) => (
     <path d="M3 22h8" strokeWidth="3" opacity="0.5" />
   </Icon>
 );
+export const LinkIcon = (p) => (
+  <Icon {...p}>
+    <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+    <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+  </Icon>
+);
 export const LassoIcon = (p) => (
   <Icon {...p}>
     <path d="M7 17c-2.5-1.2-4-3-4-5.2C3 7.5 7 4 12 4s9 3.5 9 7.8-4 7.2-9 7.2c-1.2 0-2.3-.2-3.3-.5" strokeDasharray="3 2.6" />
