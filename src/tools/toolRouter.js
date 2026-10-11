@@ -35,7 +35,10 @@ export function createToolRouter(ctx) {
     if (itemEl) {
       const { pageId, itemId } = itemEl.dataset;
       const handle = e.target.closest('[data-handle]')?.dataset.handle;
-      return handle ? resizeTape(e, viewport, pageId, itemId, handle) : dragItem(e, viewport, pageId, itemId);
+      if (!handle) return dragItem(e, viewport, pageId, itemId);
+      return store.getItem(pageId, itemId)?.type === 'postit'
+        ? resizeNote(viewport, pageId, itemId)
+        : resizeTape(e, viewport, pageId, itemId, handle);
     }
     if (tool === 'tape') {
       const hit = viewport.clientToPage(e.clientX, e.clientY);
@@ -162,6 +165,32 @@ export function createToolRouter(ctx) {
         if (handle.includes('n')) top = clamp(p.y, 0, bottom - minH);
         if (handle.includes('s')) bottom = clamp(p.y, top + minH, 1);
         const next = { ...original, x: left, y: top, w: right - left, h: bottom - top };
+        store.change(pageId, current, next, { history: false });
+        current = next;
+      },
+      up() {
+        store.pushHistory([{ pageId, before: original, after: current }]);
+      },
+      cancel() {
+        store.change(pageId, current, original, { history: false });
+      },
+    };
+  }
+
+  // A post-it stays square: its size follows the corner you drag.
+  function resizeNote(viewport, pageId, itemId) {
+    const original = store.getItem(pageId, itemId);
+    const index = viewport.pageIds.indexOf(pageId);
+    if (!original || index < 0) return 'navigate';
+    const rect = viewport.layout.rects[index];
+    const maxSize = Math.min(1 - original.x, ((1 - original.y) * rect.h) / rect.w, 0.35);
+    let current = original;
+
+    return {
+      move(ev) {
+        const p = viewport.clientToPage(ev.clientX, ev.clientY, index);
+        const wanted = Math.max(p.x - original.x, ((p.y - original.y) * rect.h) / rect.w);
+        const next = { ...original, size: clamp(wanted, 0.03, maxSize) };
         store.change(pageId, current, next, { history: false });
         current = next;
       },

@@ -119,6 +119,19 @@ export const EyeIcon = (p) => (
     <circle cx="12" cy="12" r="3" />
   </Icon>
 );
+export const EraserIcon = (p) => (
+  <Icon {...p}>
+    <path d="M7 21h10" />
+    <path d="M5.5 14.5l8.6-8.6a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L12 18H9z" />
+    <path d="M9.5 10.5l5 5" />
+  </Icon>
+);
+export const KeyboardIcon = (p) => (
+  <Icon {...p}>
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+  </Icon>
+);
 export const StudyIcon = (p) => (
   <Icon {...p}>
     <path d="M22 10L12 5 2 10l10 5 10-5z" />

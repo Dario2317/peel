@@ -6,7 +6,8 @@ import { clamp } from '../utils/platform.js';
  * a tape). It is NOT inside the zoomed page, so its text is always a normal,
  * readable size, and it follows the item while you pan and zoom.
  *   anchor: { index, rect } — page index and rectangle (fractions of the page)
- *   placement: 'over' (covers the item) | 'below' (under it, or above if no room)
+ *   placement: 'over' (covers the item) | 'below' (under it, or above if no
+ *              room) | 'beside' (right of it, or left, or below if no room)
  */
 export function Popover({ viewport, anchor, placement = 'below', className = '', style, children }) {
   const ref = useRef(null);
@@ -30,6 +31,14 @@ export function Popover({ viewport, anchor, placement = 'below', className = '',
       if (placement === 'over') {
         left = target.left - 6;
         top = target.top - 6;
+      } else if (placement === 'beside') {
+        top = target.top;
+        left = target.left + target.width + 14;
+        if (left + w > viewWidth - margin) left = target.left - w - 14;
+        if (left < margin) {
+          left = target.left;
+          top = target.top + target.height + 12;
+        }
       } else {
         left = target.left + target.width / 2 - w / 2;
         top = target.top + target.height + 12;

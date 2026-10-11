@@ -5,7 +5,7 @@ import { TapeOptions } from './TapeOptions.jsx';
 
 /**
  * The panel for the selected item: an opened post-it, or tape options.
- *   selected: { pageId, itemId, autoFocus }
+ *   selected: { pageId, itemId, startTyping }
  */
 export function SelectedItemPanel({ store, viewport, pageIndex, selected, mode, onClose, onTapeStyleUsed, onPostItColorUsed }) {
   const item = useItem(store, selected.pageId, selected.itemId);
@@ -32,7 +32,7 @@ export function SelectedItemPanel({ store, viewport, pageIndex, selected, mode, 
         pageId={selected.pageId}
         itemId={item.id}
         editable={mode === 'edit'}
-        autoFocus={selected.autoFocus}
+        startTyping={selected.startTyping}
         onClose={onClose}
         onColorUsed={onPostItColorUsed}
       />

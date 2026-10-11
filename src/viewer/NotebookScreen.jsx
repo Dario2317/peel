@@ -52,7 +52,7 @@ export function NotebookScreen({ notebookId, onBack }) {
   const [tapeStyle, setTapeStyle] = useState({ color: 'mint', pattern: 'stripes' });
   const [postItColor, setPostItColor] = useState('yellow');
   const [peek, setPeek] = useState(false);
-  const [selected, setSelected] = useState(null); // { pageId, itemId, autoFocus }
+  const [selected, setSelected] = useState(null); // { pageId, itemId, startTyping }
 
   const study = useStudySession({ store, notebookId, pages: pages ?? [], getViewer: () => viewerRef.current });
   const { pick, pasteFromClipboard, dragging } = useFileIntake(setIncoming, !incoming && !cropPage && mode === 'edit');
@@ -83,7 +83,7 @@ export function NotebookScreen({ notebookId, onBack }) {
       const { mode } = latest.current;
       if (mode === 'study' && item.type === 'tape') latest.current.study.reveal(item.id);
       else if (mode === 'study' && item.type !== 'postit') return;
-      else setSelected({ pageId, itemId, autoFocus: false });
+      else setSelected({ pageId, itemId });
     },
     tapEmpty({ x, y, pointerType }) {
       const { mode, tool, selected } = latest.current;
@@ -104,14 +104,14 @@ export function NotebookScreen({ notebookId, onBack }) {
         y: clamp(hit.y - height / 2, 0, 1 - height),
         size: POSTIT_SIZE,
         color: latest.current.postItColor,
-        title: '',
-        text: '',
+        ink: [], // drawn with the Pencil inside the open note
+        text: '', // optional typed text
         style: { font: 'system', fontSize: 0.02, color: '#2b2620', bold: false, italic: false },
         createdAt: Date.now(),
       };
       store.change(hit.pageId, null, note);
-      // With a keyboard/mouse, start typing right away; on iPad, tap the text to write.
-      setSelected({ pageId: hit.pageId, itemId: note.id, autoFocus: pointerType === 'mouse' });
+      // With a mouse, start typing; with the Pencil or a finger, start drawing.
+      setSelected({ pageId: hit.pageId, itemId: note.id, startTyping: pointerType === 'mouse' });
     },
   };
 

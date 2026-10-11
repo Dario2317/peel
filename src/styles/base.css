@@ -21,9 +21,12 @@
 }
 
 /* iPad Home Screen app: the system window controls sit in the top-left
-   corner, so nothing of ours goes there. */
+   corner, so nothing of ours goes there. And since iPadOS 26 the status bar
+   floats over the app (blurring what's under it) without always reporting
+   its height, so always keep at least its height (24px) free at the top. */
 .is-ipad.is-standalone {
   --corner-left: 76px;
+  --safe-top: max(env(safe-area-inset-top, 0px), 24px);
 }
 
 * {

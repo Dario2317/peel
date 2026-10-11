@@ -129,27 +129,26 @@
 
 /* --- Post-its ------------------------------------------------------------ */
 
+/* Closed post-its are see-through, so you can still read the page under them. */
 .postit {
   position: absolute;
   transform: rotate(var(--tilt));
-  filter: drop-shadow(0 2px 2px rgba(40, 25, 10, 0.25)) drop-shadow(0 6px 8px rgba(40, 25, 10, 0.12));
+  filter: drop-shadow(0 1px 1.5px rgba(40, 25, 10, 0.22));
   cursor: pointer;
   transition: transform 0.15s;
 }
 .postit.open {
-  transform: rotate(0deg) scale(1.08);
+  transform: rotate(0deg) scale(1.06);
 }
 .postit-paper {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 12% 10% 0;
-  overflow: hidden;
-  background: linear-gradient(170deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0) 40%), var(--note);
+  background: color-mix(in srgb, var(--note) 58%, transparent);
   /* Cut the bottom-right corner off… */
   clip-path: polygon(0 0, 100% 0, 100% 76%, 76% 100%, 0 100%);
+}
+.postit.open .postit-paper {
+  background: color-mix(in srgb, var(--note) 80%, transparent);
 }
 /* …and show it folded over. */
 .postit::after {
@@ -159,26 +158,6 @@
   top: 76%;
   width: 24%;
   height: 24%;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.05)), var(--note);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.04)), color-mix(in srgb, var(--note) 85%, transparent);
   clip-path: polygon(0 0, 100% 0, 0 100%);
-}
-.postit-title {
-  display: -webkit-box;
-  overflow: hidden;
-  color: #3b3326;
-  font-family: 'Noteworthy', 'Marker Felt', 'Segoe Print', 'Comic Sans MS', cursive;
-  font-weight: 700;
-  line-height: 1.15;
-  text-align: center;
-  word-break: break-word;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  pointer-events: none;
-}
-.postit-lines {
-  width: 80%;
-  height: 50%;
-  margin-top: 6%;
-  background: repeating-linear-gradient(180deg, transparent 0 22%, rgba(60, 45, 20, 0.28) 22% 27%);
-  pointer-events: none;
 }
