@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App.jsx';
+import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
 import { cleanUpOrphans } from './db/cleanup.js';
 import { markPlatform } from './utils/platform.js';
 import './styles/base.css';
@@ -15,7 +16,11 @@ for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
 // Remove leftovers of deleted pages from the database.
 cleanUpOrphans().catch((error) => console.warn('Cleanup failed', error));
 
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+);
 
 // Only in development (npm run dev): handy hooks for testing in the console.
 if (import.meta.env.DEV) {

@@ -48,20 +48,22 @@ function snapLine(a, b) {
  * Looks at a stroke's points ([x, y, p, …]) and returns a shape, or null:
  *   { kind: 'ellipse', cx, cy, rx, ry } | { kind: 'rect', x, y, w, h }
  *   { kind: 'line', x1, y1, x2, y2 }    | { kind: 'arrow', x1, y1, x2, y2 }
+ *   { kind: 'chevron', ax, ay, vx, vy, bx, by }  a "V" (an arrow head drawn
+ *     on its own; see arrowFromChevron)
  */
 export function recognizeShape(flatPoints) {
   const pts = pointsOf(flatPoints);
-  if (pts.length < 6) return null;
+  if (pts.length < 4) return null;
   const box = boundingBox(pts);
   const diag = Math.hypot(box.w, box.h);
-  if (diag < 24) return null;
+  if (diag < 12) return null;
   const start = pts[0];
   const end = pts[pts.length - 1];
   const length = pathLength(pts);
 
   // Closed shapes: the end comes back near the start.
   const gap = dist(start, end);
-  if (gap < diag * 0.3 && length > diag * 1.6) {
+  if (diag >= 24 && pts.length >= 6 && gap < diag * 0.3 && length > diag * 1.6) {
     const cx = (box.left + box.right) / 2;
     const cy = (box.top + box.bottom) / 2;
     const a = box.w / 2 || 1;
@@ -93,21 +95,71 @@ export function recognizeShape(flatPoints) {
     return null;
   }
 
-  // Open shapes: a straight line, maybe with an arrow head at the end.
+  // Open shapes: a straight line, maybe with an arrow head at the end
+  // (drawn in the same stroke: to the tip, then the head).
   let tipIndex = 0;
   pts.forEach((p, i) => {
     if (dist(start, p) > dist(start, pts[tipIndex])) tipIndex = i;
   });
   const tip = pts[tipIndex];
   const shaft = dist(start, tip);
-  if (shaft < 30) return null;
-  const straight = pts.slice(0, tipIndex + 1).every((p) => distanceToSegment(p, start, tip) < shaft * 0.08 + 4);
-  if (!straight) return null;
-  const tail = pts.slice(tipIndex);
-  const tailLength = pathLength(tail);
-  const [x2, y2] = snapLine(start, tip);
-  if (tailLength < shaft * 0.08) return { kind: 'line', x1: start[0], y1: start[1], x2, y2 };
-  if (tail.every((p) => dist(p, tip) < shaft * 0.45)) return { kind: 'arrow', x1: start[0], y1: start[1], x2, y2 };
+  if (shaft >= 30) {
+    const straight = pts.slice(0, tipIndex + 1).every((p) => distanceToSegment(p, start, tip) < shaft * 0.1 + 6);
+    if (straight) {
+      const tail = pts.slice(tipIndex);
+      const tailLength = pathLength(tail);
+      const [x2, y2] = snapLine(start, tip);
+      if (tailLength < shaft * 0.08) return { kind: 'line', x1: start[0], y1: start[1], x2, y2 };
+      if (tail.every((p) => dist(p, tip) < shaft * 0.6)) return { kind: 'arrow', x1: start[0], y1: start[1], x2, y2 };
+    }
+  }
+  return recognizeChevron(pts);
+}
+
+// A "V": two straight arms meeting at a sharp corner (an arrow head).
+function recognizeChevron(pts) {
+  const start = pts[0];
+  const end = pts[pts.length - 1];
+  let vertexIndex = 0;
+  let farthest = -1;
+  pts.forEach((p, i) => {
+    const d = distanceToSegment(p, start, end);
+    if (d > farthest) {
+      farthest = d;
+      vertexIndex = i;
+    }
+  });
+  if (vertexIndex === 0 || vertexIndex === pts.length - 1) return null;
+  const v = pts[vertexIndex];
+  const armA = dist(start, v);
+  const armB = dist(v, end);
+  if (armA < 8 || armB < 8 || armA / armB > 2.5 || armB / armA > 2.5) return null;
+  const straightA = pts.slice(0, vertexIndex + 1).every((p) => distanceToSegment(p, start, v) < armA * 0.22 + 3);
+  const straightB = pts.slice(vertexIndex).every((p) => distanceToSegment(p, v, end) < armB * 0.22 + 3);
+  if (!straightA || !straightB) return null;
+  const angle =
+    (Math.abs(Math.atan2(start[1] - v[1], start[0] - v[0]) - Math.atan2(end[1] - v[1], end[0] - v[0])) * 180) / Math.PI;
+  const opening = angle > 180 ? 360 - angle : angle;
+  if (opening < 20 || opening > 130) return null;
+  return { kind: 'chevron', ax: start[0], ay: start[1], vx: v[0], vy: v[1], bx: end[0], by: end[1] };
+}
+
+/**
+ * An arrow head drawn as a separate stroke: if the corner of the "V" is at
+ * the end of a straight line drawn just before, that line becomes an arrow.
+ * Returns { strokeId, shape } for the line to change, or null.
+ */
+export function arrowFromChevron(chevron, strokes) {
+  const reach = Math.max(24, Math.max(dist([chevron.ax, chevron.ay], [chevron.vx, chevron.vy]), dist([chevron.bx, chevron.by], [chevron.vx, chevron.vy])) * 0.9);
+  const vertex = [chevron.vx, chevron.vy];
+  for (const s of strokes.slice(-4).reverse()) {
+    const line = s.shape?.kind === 'line' ? s.shape : !s.shape ? recognizeShape(s.points) : null;
+    if (line?.kind !== 'line') continue;
+    const a = [line.x1, line.y1];
+    const b = [line.x2, line.y2];
+    if (dist(b, vertex) < reach) return { strokeId: s.id, shape: { kind: 'arrow', x1: a[0], y1: a[1], x2: b[0], y2: b[1] } };
+    if (dist(a, vertex) < reach) return { strokeId: s.id, shape: { kind: 'arrow', x1: b[0], y1: b[1], x2: a[0], y2: a[1] } };
+  }
   return null;
 }
 
@@ -131,6 +183,8 @@ export function shapePath(shape, size = 2) {
     }
     case 'rect':
       return `M${shape.x},${shape.y}H${shape.x + shape.w}V${shape.y + shape.h}H${shape.x}Z`;
+    case 'chevron':
+      return `M${shape.ax},${shape.ay}L${shape.vx},${shape.vy}L${shape.bx},${shape.by}`;
     case 'arrow': {
       const [h1, h2] = arrowHead(shape, size);
       return `M${shape.x1},${shape.y1}L${shape.x2},${shape.y2}M${h1[0]},${h1[1]}L${shape.x2},${shape.y2}L${h2[0]},${h2[1]}`;
@@ -159,6 +213,9 @@ export function shapePoints(shape, size = 2) {
     segment([x + w, y], [x + w, y + h]);
     segment([x + w, y + h], [x, y + h]);
     segment([x, y + h], [x, y]);
+  } else if (shape.kind === 'chevron') {
+    segment([shape.ax, shape.ay], [shape.vx, shape.vy]);
+    segment([shape.vx, shape.vy], [shape.bx, shape.by]);
   } else {
     segment([shape.x1, shape.y1], [shape.x2, shape.y2]);
     if (shape.kind === 'arrow') {
@@ -177,6 +234,8 @@ export function moveShape(shape, dx, dy) {
       return { ...shape, cx: shape.cx + dx, cy: shape.cy + dy };
     case 'rect':
       return { ...shape, x: shape.x + dx, y: shape.y + dy };
+    case 'chevron':
+      return { ...shape, ax: shape.ax + dx, ay: shape.ay + dy, vx: shape.vx + dx, vy: shape.vy + dy, bx: shape.bx + dx, by: shape.by + dy };
     default:
       return { ...shape, x1: shape.x1 + dx, y1: shape.y1 + dy, x2: shape.x2 + dx, y2: shape.y2 + dy };
   }

@@ -9,12 +9,14 @@ import { WetInk } from '../ink/WetInk.js';
 import { strokeBox } from '../ink/ink.js';
 import { dragSelection, drawLasso, drawStroke, eraseStrokes } from '../ink/drawHandlers.js';
 import { moveStroke, selectInLasso, textHeight } from '../ink/lasso.js';
+import { arrowFromChevron, recognizeShape, shapePoints } from '../ink/shapes.js';
 import { DrawingToolbar } from '../ink/DrawingToolbar.jsx';
 import { displayColor, PEN_COLORS } from '../ink/inkStyle.js';
 import { strokeStyle, useInkTool } from '../ink/useInkTool.js';
 import { useEditSession } from '../tools/useEditSession.js';
 import { newId } from '../utils/ids.js';
 import { clamp } from '../utils/platform.js';
+import { getSetting, setSetting } from '../db/settings.js';
 import { BoardContent } from './BoardContent.jsx';
 import { ZoomWindow } from './ZoomWindow.jsx';
 import { CheckIcon, PaletteIcon, RedoIcon, TrashIcon, UndoIcon, ZoomWindowIcon } from '../ui/icons.jsx';
@@ -191,9 +193,23 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
   useEffect(() => setSelection(null), [ink.tool, typing]);
 
   // --- Zoom window ------------------------------------------------------------
+  // Its size (= how much it magnifies) is remembered for next time.
+  const zoomWidth = useRef(null);
+  const zoomSaveTimer = useRef(0);
+  useEffect(() => {
+    getSetting('zoomWindowWidth', null).then((w) => (zoomWidth.current = w));
+  }, []);
+  useEffect(() => {
+    if (!zoomWin?.w) return;
+    zoomWidth.current = zoomWin.w;
+    // Saved shortly after you stop changing it (also if you close the window).
+    clearTimeout(zoomSaveTimer.current);
+    zoomSaveTimer.current = setTimeout(() => setSetting('zoomWindowWidth', zoomWidth.current), 600);
+  }, [zoomWin?.w]);
+
   const openZoomWindow = () => {
     const view = engine.current.visibleWorld();
-    const w = Math.min(320, (view.right - view.left) * 0.45);
+    const w = zoomWidth.current ?? Math.min(320, (view.right - view.left) * 0.45);
     const x = view.left + (view.right - view.left) * 0.08;
     const y = view.top + (view.bottom - view.top) * 0.12;
     setZoomWin({ x, y, w, h: w * 0.35, lineStartX: x });
@@ -229,9 +245,25 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
         toWorld,
         wet,
         getCamera,
+        // A "V" on its own only snaps when it's an arrow head for a line.
+        recognize: (points) => {
+          const shape = recognizeShape(points);
+          if (shape?.kind === 'chevron' && !arrowFromChevron(shape, note()?.ink ?? [])) return null;
+          return shape;
+        },
         onDone: (stroke) => {
           const current = note();
-          if (current) store.change(pageId, current, { ...current, ink: [...(current.ink ?? []), stroke] });
+          if (!current) return;
+          const head = stroke.shape?.kind === 'chevron' && arrowFromChevron(stroke.shape, current.ink ?? []);
+          if (head) {
+            // The line drawn before becomes an arrow; the "V" isn't kept.
+            const ink = current.ink.map((s) =>
+              s.id === head.strokeId ? { ...s, shape: head.shape, points: shapePoints(head.shape, s.size) } : s,
+            );
+            store.change(pageId, current, { ...current, ink });
+          } else {
+            store.change(pageId, current, { ...current, ink: [...(current.ink ?? []), stroke] });
+          }
           onStroke?.(stroke);
         },
       });

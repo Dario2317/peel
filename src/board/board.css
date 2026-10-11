@@ -312,6 +312,18 @@
   font: 700 18px system-ui, sans-serif;
   cursor: pointer;
 }
+.zoom-level {
+  align-self: center;
+  min-width: 42px;
+  padding: 0 2px;
+  color: var(--board-text);
+  font: 700 13px system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.zoom-gap {
+  width: 8px;
+}
 .with-zoom-window .board-tools {
   bottom: calc(clamp(180px, 36vh, 380px) + 12px);
 }

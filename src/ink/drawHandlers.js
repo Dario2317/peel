@@ -8,15 +8,19 @@ import { newId } from '../utils/ids.js';
 const HOLD_MS = 550; // hold the Pencil still this long at the end → shape
 const HOLD_SLOP_PX = 4; // a little wobble still counts as holding still
 
+const UNSNAP_PX = 14; // moving this far after a snap goes back to free drawing
+
 /**
  * Draws one stroke. If you hold still at the end of an oval, rectangle,
- * line or arrow, it snaps into a clean shape (like Apple Notes).
+ * line or arrow, it snaps into a clean shape (like Apple Notes). If you
+ * paused by accident and keep drawing, it un-snaps.
  *   style:   { tool, color, size, smooth }
  *   toWorld: (clientX, clientY) -> [x, y] in the surface's units
  *   wet:     a WetInk, and getCamera() for drawing it on screen
+ *   recognize(points): which shape it is (default: recognizeShape)
  *   onDone(stroke): save the finished stroke
  */
-export function drawStroke(e, { style, toWorld, wet, getCamera, onDone }) {
+export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recognize = recognizeShape }) {
   const [x, y] = toWorld(e.clientX, e.clientY);
   const stroke = {
     id: newId('ink'),
@@ -32,7 +36,7 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone }) {
   const armHold = () => {
     clearTimeout(holdTimer);
     holdTimer = setTimeout(() => {
-      shape = recognizeShape(stroke.points);
+      shape = recognize(stroke.points);
       if (shape) wet.draw(snapped(), getCamera());
     }, HOLD_MS);
   };
@@ -51,7 +55,12 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone }) {
 
   return {
     move(ev) {
-      if (shape) return; // snapped: lift the Pencil to keep the shape
+      if (shape) {
+        // Snapped: lift the Pencil to keep the shape. Keep drawing instead
+        // (it was just a pause, e.g. at the tip of an arrow) to un-snap.
+        if (Math.hypot(ev.clientX - still.x, ev.clientY - still.y) < UNSNAP_PX) return;
+        shape = null;
+      }
       addPoints(ev);
       if (Math.hypot(ev.clientX - still.x, ev.clientY - still.y) > HOLD_SLOP_PX) {
         still = { x: ev.clientX, y: ev.clientY };

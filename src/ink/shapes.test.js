@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recognizeShape, shapePoints } from './shapes.js';
+import { arrowFromChevron, recognizeShape, shapePoints } from './shapes.js';
 
 // Builds a flat [x, y, p, …] array from [x, y] pairs, with a bit of hand wobble.
 const stroke = (pairs, wobble = 1.5) =>
@@ -44,6 +44,19 @@ describe('recognizeShape', () => {
   it('recognizes an arrow (line, then a little hook at the end)', () => {
     const points = [...along([[10, 100], [300, 100]], 40), [285, 88], [270, 80], [285, 90], [300, 100], [285, 110], [272, 118]];
     expect(recognizeShape(stroke(points, 0.5)).kind).toBe('arrow');
+  });
+
+  it('recognizes a short arrow drawn line → down → back up through the tip → up ("—>")', () => {
+    const shaft = along([[10, 100], [90, 100]], 30);
+    const head = [...along([[90, 100], [62, 124]], 8), ...along([[62, 124], [90, 100]], 8), ...along([[90, 100], [62, 76]], 8), [62, 76]];
+    expect(recognizeShape(stroke([...shaft, ...head], 1)).kind).toBe('arrow');
+  });
+
+  it('recognizes an arrow head drawn on its own, and joins it to the line', () => {
+    const v = recognizeShape(stroke([...along([[270, 80], [300, 100]], 8), ...along([[300, 100], [270, 120]], 8), [270, 120]], 0.5));
+    expect(v.kind).toBe('chevron');
+    const line = { id: 'l', shape: { kind: 'line', x1: 10, y1: 100, x2: 298, y2: 100 }, points: [] };
+    expect(arrowFromChevron(v, [line])).toEqual({ strokeId: 'l', shape: { kind: 'arrow', x1: 10, y1: 100, x2: 298, y2: 100 } });
   });
 
   it('leaves scribbles and handwriting alone', () => {

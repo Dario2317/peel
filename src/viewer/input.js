@@ -134,6 +134,9 @@ export class GestureController {
         moved: false,
         type,
       };
+      // Where the element is on screen: zooming happens around the fingers,
+      // measured from the element's own top-left corner.
+      this.box = this.el.getBoundingClientRect();
       this.samples = [];
       this.o.onGestureStart?.();
     }
@@ -202,7 +205,7 @@ export class GestureController {
     let cam = this.o.getCamera();
     if (now.count >= 2 && last.spread > 0) {
       const scale = this.o.clampScale(cam.scale * (now.spread / last.spread));
-      cam = zoomAround(cam, last.x, last.y, scale);
+      cam = zoomAround(cam, last.x - this.box.left, last.y - this.box.top, scale);
     }
     this.o.setCamera({ ...cam, x: cam.x + now.x - last.x, y: cam.y + now.y - last.y });
 
