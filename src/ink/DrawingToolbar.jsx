@@ -1,5 +1,5 @@
 import { HIGHLIGHT_COLORS, HIGHLIGHT_SIZES, PEN_COLORS, PEN_SIZES } from './inkStyle.js';
-import { EraserIcon, HighlighterIcon, KeyboardIcon, PenIcon } from '../ui/icons.jsx';
+import { EraserIcon, HighlighterIcon, KeyboardIcon, LassoIcon, PenIcon } from '../ui/icons.jsx';
 import './ink.css';
 
 /**
@@ -14,7 +14,7 @@ export function DrawingToolbar({ ink, onInk, typing = false, onTyping }) {
   const sizes = highlighter ? HIGHLIGHT_SIZES : PEN_SIZES;
   const color = highlighter ? ink.highlightColor : ink.penColor;
   const size = highlighter ? ink.highlightSize : ink.penSize;
-  const showOptions = !typing && ink.tool !== 'eraser';
+  const showOptions = !typing && (ink.tool === 'pen' || ink.tool === 'highlighter');
 
   const pick = (tool) => {
     onInk({ tool });
@@ -38,6 +38,7 @@ export function DrawingToolbar({ ink, onInk, typing = false, onTyping }) {
         {toolButton('pen', 'Pen', <PenIcon />)}
         {toolButton('highlighter', 'Marker', <HighlighterIcon />)}
         {toolButton('eraser', 'Eraser', <EraserIcon />)}
+        {toolButton('lasso', 'Lasso', <LassoIcon />)}
         {onTyping && (
           <button className={`tool ${typing ? 'on' : ''}`} onClick={() => onTyping(!typing)} title="Type" aria-pressed={typing}>
             <KeyboardIcon />

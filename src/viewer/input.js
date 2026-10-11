@@ -76,8 +76,8 @@ export class GestureController {
 
   onPointerDown(e) {
     if (!this.o.getCamera()) return; // not laid out yet
-    // Text fields and sliders keep their normal behavior (caret, selection…).
-    if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    // Text fields, sliders and buttons keep their normal behavior.
+    if (e.target.closest?.('input, textarea, select, button, [contenteditable="true"]')) return;
     if (e.pointerType === 'pen') {
       this.o.onPencilSeen?.();
       this.o.onHover?.(null);

@@ -133,6 +133,19 @@ export const HighlighterIcon = (p) => (
     <path d="M3 22h8" strokeWidth="3" opacity="0.5" />
   </Icon>
 );
+export const LassoIcon = (p) => (
+  <Icon {...p}>
+    <path d="M7 17c-2.5-1.2-4-3-4-5.2C3 7.5 7 4 12 4s9 3.5 9 7.8-4 7.2-9 7.2c-1.2 0-2.3-.2-3.3-.5" strokeDasharray="3 2.6" />
+    <path d="M8.7 18.5c0 1.4-1 2.5-2.3 2.5" />
+  </Icon>
+);
+export const ZoomWindowIcon = (p) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="8" height="6" rx="1" strokeDasharray="2.5 2" />
+    <rect x="3" y="13" width="18" height="8" rx="1.5" />
+    <path d="M7 10v3" />
+  </Icon>
+);
 export const PaletteIcon = (p) => (
   <Icon {...p}>
     <path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.8-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z" />

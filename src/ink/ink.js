@@ -23,7 +23,7 @@ function strokeOptions(stroke, finished) {
     size: stroke.size,
     thinning: stroke.pressure ? 0.55 : 0, // no pressure → even width, like a fineliner
     smoothing: 0.3 + 0.6 * smooth, // softer outline
-    streamline: 0.1 + 0.6 * smooth, // steadier line (follows the tip a bit more loosely)
+    streamline: 0.05 + 0.55 * smooth, // steadier line, but keep up with fast strokes
     simulatePressure: false,
     last: finished,
   };

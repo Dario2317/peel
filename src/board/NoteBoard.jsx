@@ -1,21 +1,23 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useHistoryState, useItem } from '../state/useAnnotations.js';
 import { GestureController } from '../viewer/input.js';
 import { markPencilSeen, pencil } from '../viewer/pencil.js';
 import { zoomAround } from '../viewer/camera.js';
 import { colorValue, POSTIT_COLORS } from '../overlay/looks.js';
-import { InkLayer } from '../ink/InkLayer.jsx';
 import { WetInk } from '../ink/WetInk.js';
 import { strokeBox } from '../ink/ink.js';
-import { drawStroke, eraseStrokes } from '../ink/drawHandlers.js';
+import { dragSelection, drawLasso, drawStroke, eraseStrokes } from '../ink/drawHandlers.js';
+import { moveStroke, selectInLasso, textHeight } from '../ink/lasso.js';
 import { DrawingToolbar } from '../ink/DrawingToolbar.jsx';
 import { displayColor, PEN_COLORS } from '../ink/inkStyle.js';
 import { strokeStyle, useInkTool } from '../ink/useInkTool.js';
 import { useEditSession } from '../tools/useEditSession.js';
 import { newId } from '../utils/ids.js';
 import { clamp } from '../utils/platform.js';
-import { CheckIcon, PaletteIcon, RedoIcon, TrashIcon, UndoIcon } from '../ui/icons.jsx';
+import { BoardContent } from './BoardContent.jsx';
+import { ZoomWindow } from './ZoomWindow.jsx';
+import { CheckIcon, PaletteIcon, RedoIcon, TrashIcon, UndoIcon, ZoomWindowIcon } from '../ui/icons.jsx';
 import './board.css';
 
 const GRID = 24; // distance between the dots, in board units
@@ -31,10 +33,12 @@ export const BOARD_BACKGROUNDS = [
 
 /**
  * An opened post-it: a full-screen dotted board, like Freeform.
- *   - Pencil (or mouse): draw, highlight, erase
+ *   - Pencil (or mouse): draw, highlight, erase; hold still at the end of a
+ *     line or shape to make it a clean oval/rectangle/line/arrow
+ *   - Lasso: circle things, then drag them somewhere else (or delete them)
+ *   - Type: tap anywhere to write a text box there
+ *   - Zoom window: write big at the bottom, it lands small in a box
  *   - fingers: scroll (with a fling) and pinch to zoom; two-finger tap = undo
- *   - Type: tap anywhere to write a text box there; tap a text to edit it,
- *     drag its handle to move it
  * The note stores: ink (strokes), texts [{ id, x, y, w, text, color, size }],
  * bg ('white' | 'black' | 'note') and view (where you were).
  */
@@ -45,6 +49,9 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
   const [editingId, setEditingId] = useState(null); // the text box being edited
   const [menu, setMenu] = useState(null); // 'look' | 'zoom' | null
   const [zoom, setZoom] = useState(100);
+  const [selection, setSelection] = useState(null); // { strokeIds: Set, textIds: Set }
+  const [moving, setMoving] = useState(null); // { dx, dy } while dragging the selection
+  const [zoomWin, setZoomWin] = useState(null); // { x, y, w, h, lineStartX }
   const edit = useEditSession(store, pageId, itemId);
   const { canUndo, canRedo } = useHistoryState(store);
 
@@ -58,18 +65,17 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
 
   const bg = item?.bg ?? 'white';
   const dark = bg === 'black';
-
-  // --- Text boxes -------------------------------------------------------------
   const note = () => store.getItem(pageId, itemId);
+
+  // --- Changing the note ----------------------------------------------------
+  const setNote = (fields, options) => {
+    const current = note();
+    if (current) store.change(pageId, current, { ...current, ...fields }, options);
+  };
   const findBox = (id) => note()?.texts?.find((t) => t.id === id) ?? null;
 
-  const setTexts = (texts, options) => {
-    const current = note();
-    if (current) store.change(pageId, current, { ...current, texts }, options);
-  };
-
-  // Record one undo step for a single text box: from `before` (null = it
-  // didn't exist) to how it is now.
+  // One undo step for a single text box: from `before` (null = it didn't
+  // exist) to how it is now.
   const recordTextChange = (id, before) => {
     const current = note();
     if (!current) return;
@@ -83,8 +89,9 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
     store.pushHistory([{ pageId, before: { ...current, texts: reverted }, after: current }]);
   };
 
-  // Start editing a text box. Focusing inside the tap itself is what makes
-  // iPad show the keyboard (flushSync puts the text field on screen first).
+  // --- Text boxes -----------------------------------------------------------
+  // Focusing inside the tap itself is what makes iPad show the keyboard
+  // (flushSync puts the text field on screen first).
   const beginEdit = (id) => {
     if (!editStart.current.has(id)) editStart.current.set(id, findBox(id));
     flushSync(() => {
@@ -98,10 +105,19 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
 
   const endEdit = (id) => {
     setEditingId((current) => (current === id ? null : current));
+    if (!editStart.current.has(id)) return; // already finished (e.g. deleted)
     const box = findBox(id);
-    if (box && !box.text.trim()) setTexts((note()?.texts ?? []).filter((t) => t.id !== id), { history: false });
-    const before = editStart.current.has(id) ? editStart.current.get(id) : box;
+    if (box && !box.text.trim()) setNote({ texts: note().texts.filter((t) => t.id !== id) }, { history: false });
+    const before = editStart.current.get(id);
     editStart.current.delete(id);
+    recordTextChange(id, before);
+  };
+
+  const deleteText = (id) => {
+    const before = editStart.current.has(id) ? editStart.current.get(id) : findBox(id);
+    editStart.current.delete(id);
+    setNote({ texts: (note()?.texts ?? []).filter((t) => t.id !== id) }, { history: false });
+    setEditingId((current) => (current === id ? null : current));
     recordTextChange(id, before);
   };
 
@@ -118,13 +134,76 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       size: TEXT_SIZE,
     };
     editStart.current.set(id, null);
-    setTexts([...(note()?.texts ?? []), box], { history: false });
+    setNote({ texts: [...(note()?.texts ?? []), box] }, { history: false });
     beginEdit(id);
+  };
+
+  const textEditing = {
+    id: editingId,
+    setRef: (id) => (el) => (el ? textRefs.current.set(id, el) : textRefs.current.delete(id)),
+    onInput: (id, text) => setNote({ texts: (note()?.texts ?? []).map((t) => (t.id === id ? { ...t, text } : t)) }, { history: false }),
+    onBlur: endEdit,
+    onDelete: deleteText,
+  };
+
+  // --- Lasso selection --------------------------------------------------------
+  const selectionBox = useMemo(() => {
+    if (!selection || !item) return null;
+    const box = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
+    const grow = (l, t, r, b) => {
+      box.left = Math.min(box.left, l);
+      box.top = Math.min(box.top, t);
+      box.right = Math.max(box.right, r);
+      box.bottom = Math.max(box.bottom, b);
+    };
+    for (const s of item.ink ?? []) {
+      if (!selection.strokeIds.has(s.id)) continue;
+      const b = strokeBox(s);
+      grow(b.left - s.size, b.top - s.size, b.right + s.size, b.bottom + s.size);
+    }
+    for (const t of item.texts ?? []) if (selection.textIds.has(t.id)) grow(t.x, t.y, t.x + t.w, t.y + textHeight(t));
+    return box.left === Infinity ? null : box;
+  }, [selection, item]);
+
+  const moveSelection = (dx, dy) => {
+    setMoving(null);
+    if (!selection || (!dx && !dy)) return;
+    const current = note();
+    store.change(pageId, current, {
+      ...current,
+      ink: (current.ink ?? []).map((s) => (selection.strokeIds.has(s.id) ? moveStroke(s, dx, dy) : s)),
+      texts: (current.texts ?? []).map((t) => (selection.textIds.has(t.id) ? { ...t, x: t.x + dx, y: t.y + dy } : t)),
+    });
+  };
+
+  const deleteSelection = () => {
+    if (!selection) return;
+    const current = note();
+    store.change(pageId, current, {
+      ...current,
+      ink: (current.ink ?? []).filter((s) => !selection.strokeIds.has(s.id)),
+      texts: (current.texts ?? []).filter((t) => !selection.textIds.has(t.id)),
+    });
+    setSelection(null);
+  };
+
+  // Changing tool clears the selection.
+  useEffect(() => setSelection(null), [ink.tool, typing]);
+
+  // --- Zoom window ------------------------------------------------------------
+  const openZoomWindow = () => {
+    const view = engine.current.visibleWorld();
+    const w = Math.min(320, (view.right - view.left) * 0.45);
+    const x = view.left + (view.right - view.left) * 0.08;
+    const y = view.top + (view.bottom - view.top) * 0.12;
+    setZoomWin({ x, y, w, h: w * 0.35, lineStartX: x });
+    setSelection(null);
   };
 
   const latest = useRef();
   latest.current = {
-    ink, typing, editable, dark, editingId, beginEdit, createText, findBox, recordTextChange, setTexts,
+    ink, typing, editable, dark, editingId, selectionBox, zoomWin,
+    beginEdit, createText, findBox, recordTextChange, setNote, setSelection, setMoving, moveSelection, setZoomWin,
     isEditing: (id) => editStart.current.has(id),
   };
 
@@ -138,7 +217,55 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
     store.change(pageId, item, { ...item, title: '', text: '', texts: [...(item.texts ?? []), box] }, { history: false });
   }, []);
 
-  // --- The board engine (plain JS: camera, gestures, drawing) ----------------
+  // --- Drawing tools, shared by the board and the zoom window ----------------
+  // Returns a pointer handler for pen / marker / eraser, or 'navigate'.
+  const makeHandler = (e, { toWorld, wet, getCamera, onStroke, showCursor }) => {
+    const { ink, dark } = latest.current;
+    const style = strokeStyle(ink);
+    if (style) {
+      wet.dark = dark;
+      return drawStroke(e, {
+        style,
+        toWorld,
+        wet,
+        getCamera,
+        onDone: (stroke) => {
+          const current = note();
+          if (current) store.change(pageId, current, { ...current, ink: [...(current.ink ?? []), stroke] });
+          onStroke?.(stroke);
+        },
+      });
+    }
+    if (ink.tool !== 'eraser') return 'navigate';
+    const before = note();
+    return eraseStrokes(e, {
+      toWorld,
+      radius: () => ERASER_RADIUS_PX / getCamera().scale,
+      getStrokes: () => note()?.ink ?? [],
+      removeStrokes: (ids) => latest.current.setNote({ ink: note().ink.filter((s) => !ids.has(s.id)) }, { history: false }),
+      // The eraser also removes text boxes it touches.
+      onPoint: (clientX, clientY) => {
+        showCursor?.(clientX, clientY);
+        const textEl = document.elementFromPoint(clientX, clientY)?.closest?.('[data-text-id]');
+        if (textEl) {
+          const id = textEl.dataset.textId;
+          latest.current.setNote({ texts: (note()?.texts ?? []).filter((t) => t.id !== id) }, { history: false });
+        }
+      },
+      onDone: () => {
+        showCursor?.(null);
+        const after = note();
+        if (before && after && before !== after) store.pushHistory([{ pageId, before, after }]);
+      },
+      onCancel: () => {
+        showCursor?.(null);
+        store.change(pageId, note(), before, { history: false });
+      },
+    });
+  };
+  latest.current.makeHandler = makeHandler;
+
+  // --- The board engine (plain JS: camera, gestures) --------------------------
   useLayoutEffect(() => {
     const container = containerRef.current;
     const world = worldRef.current;
@@ -163,13 +290,14 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
         const b = strokeBox(s);
         grow(b.left, b.top, b.right, b.bottom);
       }
-      for (const t of current?.texts ?? []) grow(t.x, t.y, t.x + t.w, t.y + t.size * 1.4 * (t.text.split('\n').length + 1));
+      for (const t of current?.texts ?? []) grow(t.x, t.y, t.x + t.w, t.y + textHeight(t) + t.size);
+      const zw = latest.current.zoomWin;
+      if (zw) grow(zw.x, zw.y, zw.x + zw.w, zw.y + zw.h);
       return box;
     };
 
     // How far you can scroll past what's on the board: lots of room below
-    // (to keep writing), some to the sides and above. Drawing further out
-    // makes the board bigger.
+    // (to keep writing), some to the sides and above.
     const clampCamera = (cam) => {
       const s = cam.scale;
       const b = contentBox();
@@ -186,6 +314,7 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
     const apply = () => {
       const { x, y, scale } = camera;
       world.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      world.style.setProperty('--zoom', scale); // things that keep their size on screen
       // The dots are the background, so they go on forever.
       const step = GRID * scale;
       container.style.backgroundSize = `${step}px ${step}px`;
@@ -209,18 +338,19 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       const r = container.getBoundingClientRect();
       return [(clientX - r.left - camera.x) / camera.scale, (clientY - r.top - camera.y) / camera.scale];
     };
+    const getCamera = () => camera;
 
     // The dot that shows where the Pencil is (hover), or the eraser circle.
     const showCursor = (clientX, clientY) => {
       const dot = hoverRef.current;
       const { ink, typing, editable } = latest.current;
-      if (clientX === null || !editable || typing) {
+      const style = strokeStyle(ink);
+      const eraser = ink.tool === 'eraser';
+      if (clientX === null || !editable || typing || (!style && !eraser)) {
         dot.style.display = 'none';
         return;
       }
       const r = container.getBoundingClientRect();
-      const eraser = ink.tool === 'eraser';
-      const style = strokeStyle(ink);
       const diameter = eraser ? ERASER_RADIUS_PX * 2 : Math.max(4, style.size * camera.scale);
       dot.className = `hover-dot ${eraser ? 'eraser' : ''}`;
       dot.style.display = 'block';
@@ -230,51 +360,48 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       dot.style.top = `${clientY - r.top}px`;
     };
 
+    const insideSelection = (clientX, clientY) => {
+      const box = latest.current.selectionBox;
+      if (!box) return false;
+      const [x, y] = toWorld(clientX, clientY);
+      return x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+    };
+
     const routePointer = (e) => {
       const { ink, typing, editable } = latest.current;
       if (!editable) return 'navigate';
 
-      // A text box's handle: drag to move it (with anything, it's a small target).
-      const handle = e.target.closest?.('[data-text-handle]');
-      if (handle) return dragText(e, handle.dataset.textHandle);
+      // Handles (small targets, any finger or Pencil): move a text, move the zoom box.
+      const textHandle = e.target.closest?.('[data-text-handle]');
+      if (textHandle) return dragText(e, textHandle.dataset.textHandle);
+      if (e.target.closest?.('[data-zoom-handle]')) return dragZoomBox(e);
 
       if (typing) return 'navigate'; // taps create/edit text (see onTap)
       if (e.pointerType === 'touch' && pencil.seen) return 'navigate';
 
-      const style = strokeStyle(ink);
-      if (style) {
+      if (ink.tool === 'lasso') {
+        if (insideSelection(e.clientX, e.clientY)) {
+          return dragSelection(e, {
+            toWorld,
+            onMove: (dx, dy) => latest.current.setMoving({ dx, dy }),
+            onDone: (dx, dy) => latest.current.moveSelection(dx, dy),
+            onCancel: () => latest.current.setMoving(null),
+          });
+        }
+        latest.current.setSelection(null);
         wet.dark = latest.current.dark;
-        return drawStroke(e, {
-          style,
+        return drawLasso(e, {
           toWorld,
           wet,
-          getCamera: () => camera,
-          onDone: (stroke) => {
+          getCamera,
+          onDone: (polygon) => {
             const current = note();
-            if (current) store.change(pageId, current, { ...current, ink: [...(current.ink ?? []), stroke] });
+            const found = selectInLasso(polygon, current?.ink ?? [], current?.texts ?? []);
+            latest.current.setSelection(found.strokeIds.size || found.textIds.size ? found : null);
           },
         });
       }
-      const before = note();
-      return eraseStrokes(e, {
-        toWorld,
-        radius: () => ERASER_RADIUS_PX / camera.scale,
-        getStrokes: () => note()?.ink ?? [],
-        removeStrokes: (ids) => {
-          const current = note();
-          store.change(pageId, current, { ...current, ink: current.ink.filter((s) => !ids.has(s.id)) }, { history: false });
-        },
-        onPoint: showCursor,
-        onDone: () => {
-          showCursor(null);
-          const after = note();
-          if (before && after && before !== after) store.pushHistory([{ pageId, before, after }]);
-        },
-        onCancel: () => {
-          showCursor(null);
-          store.change(pageId, note(), before, { history: false });
-        },
-      });
+      return latest.current.makeHandler(e, { toWorld, wet, getCamera, showCursor });
     };
 
     const dragText = (e, id) => {
@@ -285,7 +412,7 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
         move(ev) {
           const [x, y] = toWorld(ev.clientX, ev.clientY);
           const texts = (note()?.texts ?? []).map((t) => (t.id === id ? { ...t, x: start.x + x - sx, y: start.y + y - sy } : t));
-          latest.current.setTexts(texts, { history: false });
+          latest.current.setNote({ texts }, { history: false });
         },
         up() {
           // While the text is being edited, the whole edit (typing + moving)
@@ -293,7 +420,24 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
           if (!latest.current.isEditing(id)) latest.current.recordTextChange(id, start);
         },
         cancel() {
-          latest.current.setTexts((note()?.texts ?? []).map((t) => (t.id === id ? start : t)), { history: false });
+          latest.current.setNote({ texts: (note()?.texts ?? []).map((t) => (t.id === id ? start : t)) }, { history: false });
+        },
+      };
+    };
+
+    const dragZoomBox = (e) => {
+      const start = latest.current.zoomWin;
+      if (!start) return 'navigate';
+      const [sx, sy] = toWorld(e.clientX, e.clientY);
+      return {
+        move(ev) {
+          const [x, y] = toWorld(ev.clientX, ev.clientY);
+          const nx = start.x + x - sx;
+          latest.current.setZoomWin({ ...start, x: nx, y: start.y + y - sy, lineStartX: nx });
+        },
+        up() {},
+        cancel() {
+          latest.current.setZoomWin(start);
         },
       };
     };
@@ -309,11 +453,13 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       } else if (typing) {
         const [wx, wy] = toWorld(x, y);
         latest.current.createText(wx, wy); // new text where you tapped
+      } else {
+        latest.current.setSelection(null);
       }
     };
 
     const gestures = new GestureController(container, {
-      getCamera: () => camera,
+      getCamera,
       setCamera,
       clampScale: (s) => clamp(s, MIN_SCALE, MAX_SCALE),
       onGestureStart: () => (world.style.willChange = 'transform'),
@@ -343,7 +489,28 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
         setCamera({ scale, x: -(b.left - 20) * scale, y: -(b.top - 20) * scale });
       },
       visibleRight: () => (size.width - camera.x) / camera.scale,
-      camera: () => camera,
+      visibleWorld: () => ({
+        left: -camera.x / camera.scale,
+        top: -camera.y / camera.scale,
+        right: (size.width - camera.x) / camera.scale,
+        bottom: (size.height - camera.y) / camera.scale,
+      }),
+      // Keep a box (board units) on screen, above `bottomInset` px.
+      ensureVisible: (box, bottomInset) => {
+        const s = camera.scale;
+        const top = box.y * s + camera.y;
+        const bottom = (box.y + box.h) * s + camera.y;
+        const left = box.x * s + camera.x;
+        const right = (box.x + box.w) * s + camera.x;
+        const usable = size.height - bottomInset;
+        let { x, y } = camera;
+        if (bottom > usable - 16) y -= bottom - (usable - 16);
+        if (top < 16) y += 16 - top;
+        if (right > size.width - 16) x -= right - (size.width - 16);
+        if (left < 16) x += 16 - left;
+        if (x !== camera.x || y !== camera.y) setCamera({ ...camera, x, y });
+      },
+      camera: getCamera,
       apply,
     };
     if (import.meta.env.DEV) window.__board = engine.current; // for debugging in the console
@@ -358,6 +525,11 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       if (current && editable) store.change(pageId, current, { ...current, view: camera }, { history: false });
     };
   }, []);
+
+  // Keep the zoom window's box in view on the board.
+  useEffect(() => {
+    if (zoomWin) engine.current?.ensureVisible(zoomWin, window.innerHeight * 0.36 + 70);
+  }, [zoomWin?.x, zoomWin?.y]);
 
   // Grow the text field being edited with its text.
   useLayoutEffect(() => {
@@ -374,10 +546,11 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
 
   if (!item) return null;
   const noteColor = colorValue(POSTIT_COLORS, item.color);
-  const setBackground = (id) => edit.discrete({ bg: id });
+  const movingInfo = moving && selection ? { ...selection, ...moving } : null;
+  const selected = selection ? selection.strokeIds.size + selection.textIds.size : 0;
 
   return (
-    <div className={`note-board bg-${bg}`} style={{ '--note': noteColor }}>
+    <div className={`note-board bg-${bg} ${zoomWin ? 'with-zoom-window' : ''}`} style={{ '--note': noteColor }}>
       <header className="board-bar">
         <button className="button small" onClick={onClose}>
           <CheckIcon size={18} /> Done
@@ -390,6 +563,14 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
             </button>
             <button className="icon-button" onClick={() => store.redo()} disabled={!canRedo} aria-label="Redo" title="Redo">
               <RedoIcon />
+            </button>
+            <button
+              className={`icon-button ${zoomWin ? 'on' : ''}`}
+              onClick={() => (zoomWin ? setZoomWin(null) : openZoomWindow())}
+              aria-label="Zoom window"
+              title="Zoom window: write big, it lands small"
+            >
+              <ZoomWindowIcon />
             </button>
             <button
               className={`icon-button ${menu === 'look' ? 'on' : ''}`}
@@ -420,7 +601,7 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
                 <button
                   key={b.id}
                   className={`bg-choice bg-${b.id} ${bg === b.id ? 'on' : ''}`}
-                  onClick={() => setBackground(b.id)}
+                  onClick={() => edit.discrete({ bg: b.id })}
                 >
                   <span className="bg-swatch" />
                   {b.label}
@@ -452,58 +633,74 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
         onPointerDown={() => menu && setMenu(null)}
       >
         <div ref={worldRef} className="board-world">
-          <InkLayer strokes={item.ink ?? []} dark={dark} />
-          {(item.texts ?? []).map((box) =>
-            box.id === editingId && editable ? (
-              <div key={box.id} className="board-textbox editing" style={{ left: box.x, top: box.y, width: box.w }}>
-                <div className="text-handle" data-text-handle={box.id} title="Drag to move" />
-                <textarea
-                  ref={(el) => (el ? textRefs.current.set(box.id, el) : textRefs.current.delete(box.id))}
-                  value={box.text}
-                  rows={1}
-                  style={{ color: displayColor(box.color, dark), fontSize: box.size }}
-                  onChange={(e) =>
-                    latest.current.setTexts(
-                      (note()?.texts ?? []).map((t) => (t.id === box.id ? { ...t, text: e.target.value } : t)),
-                      { history: false },
-                    )
-                  }
-                  onBlur={() => endEdit(box.id)}
-                />
-              </div>
-            ) : (
-              <div
-                key={box.id}
-                className="board-textbox"
-                data-text-id={box.id}
-                style={{ left: box.x, top: box.y, width: box.w, color: displayColor(box.color, dark), fontSize: box.size }}
-              >
-                {box.text}
-              </div>
-            ),
+          <BoardContent note={item} dark={dark} moving={movingInfo} editing={editable ? textEditing : null} />
+          {selectionBox && (
+            <div
+              className="selection-box"
+              style={{
+                left: selectionBox.left + (moving?.dx ?? 0),
+                top: selectionBox.top + (moving?.dy ?? 0),
+                width: selectionBox.right - selectionBox.left,
+                height: selectionBox.bottom - selectionBox.top,
+              }}
+            />
+          )}
+          {zoomWin && (
+            <div className="zoom-target" style={{ left: zoomWin.x, top: zoomWin.y, width: zoomWin.w, height: zoomWin.h }}>
+              <div className="zoom-handle" data-zoom-handle title="Drag to move the box" />
+            </div>
           )}
         </div>
         <canvas ref={wetRef} className="wet-ink" />
         <div ref={hoverRef} className="hover-dot" style={{ display: 'none' }} />
       </div>
 
-      <div className="board-zoom">
-        {menu === 'zoom' && (
-          <div className="board-menu zoom">
-            <button onClick={() => { engine.current.zoomTo(1); setMenu(null); }}>100%</button>
-            <button onClick={() => { engine.current.zoomTo(2); setMenu(null); }}>200%</button>
-            <button onClick={() => { engine.current.fitAll(); setMenu(null); }}>Fit everything</button>
-          </div>
-        )}
-        <button className="zoom-pill" onClick={() => setMenu(menu === 'zoom' ? null : 'zoom')} title="Zoom">
-          {zoom}%
-        </button>
-      </div>
+      {selected > 0 && !moving && (
+        <div className="selection-bar">
+          <span>
+            {selected} selected · drag to move
+          </span>
+          <button className="button small" onClick={deleteSelection}>
+            <TrashIcon size={16} /> Delete
+          </button>
+          <button className="button small" onClick={() => setSelection(null)}>
+            Done
+          </button>
+        </div>
+      )}
+
+      {!zoomWin && (
+        <div className="board-zoom">
+          {menu === 'zoom' && (
+            <div className="board-menu zoom">
+              <button onClick={() => { engine.current.zoomTo(1); setMenu(null); }}>100%</button>
+              <button onClick={() => { engine.current.zoomTo(2); setMenu(null); }}>200%</button>
+              <button onClick={() => { engine.current.fitAll(); setMenu(null); }}>Fit everything</button>
+            </div>
+          )}
+          <button className="zoom-pill" onClick={() => setMenu(menu === 'zoom' ? null : 'zoom')} title="Zoom">
+            {zoom}%
+          </button>
+        </div>
+      )}
 
       {editable && (
         <div className="board-tools">
           <DrawingToolbar ink={ink} onInk={setInk} typing={typing} onTyping={setTyping} />
         </div>
+      )}
+
+      {zoomWin && editable && (
+        <ZoomWindow
+          note={item}
+          dark={dark}
+          zw={zoomWin}
+          onChange={setZoomWin}
+          makeHandler={(e, options) => latest.current.makeHandler(e, options)}
+          onUndo={() => store.undo()}
+          onRedo={() => store.redo()}
+          onClose={() => setZoomWin(null)}
+        />
       )}
     </div>
   );

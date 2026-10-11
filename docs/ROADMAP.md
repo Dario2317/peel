@@ -14,7 +14,9 @@ What's done, what's next, and requests to remember.
   keep the same size on screen at any zoom; opening one shows a full-screen
   dotted board (like Freeform) with a white, black or note-color background,
   to draw on with the Pencil (pen, marker, eraser, smoothing), scroll and
-  zoom (zoom pill bottom-left), and text boxes you can place anywhere.
+  zoom (zoom pill bottom-left), text boxes you can place anywhere, shapes
+  (hold still to snap ovals, rectangles, lines, arrows), lasso to move or
+  delete, and a zoom window to write small precisely.
 
 ## Next
 
@@ -34,9 +36,10 @@ What's done, what's next, and requests to remember.
 
 ## Requests to fit in
 
-- **Zoom window** (like GoodNotes), right after milestone 3: a box on the
-  page and a big writing area at the bottom; what you write there is shrunk
-  into the box, for precise small handwriting.
+- **Zoom window on the pages** (already on the post-it boards): a box on the
+  page and a big writing area at the bottom, for precise small handwriting.
+- **Freeform links (idea)**: a post-it could hold a link to a real Freeform
+  board and open the Freeform app (Freeform can't be shown inside Peel).
 - **iPadOS three-finger undo bar**: not possible for a web app (the system
   only connects it to text fields). Peel uses two-finger tap = undo,
   three-finger tap = redo, plus on-screen buttons.
