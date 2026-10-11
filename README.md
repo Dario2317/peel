@@ -36,6 +36,20 @@ Every `git push` to `main` runs the tests, builds the app and publishes it to
 GitHub Pages automatically (see `.github/workflows/deploy.yml`). Only the app's
 code goes online, never your books or notes.
 
+## Using Peel
+
+- **Move** (hand): open post-its and tapes by tapping them; drag them with the
+  Pencil (or mouse) to move them, drag a tape's corners to resize it.
+- **Post-it**: tap the page to stick a note there.
+- **Tape**: drag over what you want to hide. Tap the tool again for color and pattern.
+- **Peek**: see through all tapes while editing.
+- **Undo / Redo**: buttons, two-finger tap (undo), three-finger tap (redo), Ctrl/Cmd+Z.
+- **Study**: every tape goes back on. Tap the highlighted one to peel it, then
+  answer Got it or Missed. Missed tapes come first next time.
+
+Once an Apple Pencil has been used, fingers only scroll, zoom and tap, so a
+resting palm never moves anything.
+
 ## How the code is organized
 
 ```
@@ -46,6 +60,10 @@ src/
   library/             the notebook grid, install hint, storage info
   viewer/              the page viewer: pan/zoom engine, touch & Pencil input,
                        page rendering, page strip, crop tool
+  overlay/             what's drawn on the pages: tape, post-its
+  tools/               toolbar, what each tool does, the post-it and tape panels
+  study/               study mode: session order, study bar, summary
+  state/               the annotation store (saving, undo/redo)
   ui/                  dialogs, menus, toasts, icons
   styles/              CSS
   utils/               small helpers (ids, geometry)

@@ -1,0 +1,184 @@
+/* Everything on top of a page. Sizes are in page units: a page is always
+   1000 units wide, and the whole page is scaled when you zoom. */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+}
+
+/* --- Tape -------------------------------------------------------------- */
+
+.tape {
+  position: absolute;
+  cursor: pointer;
+  /* The shadow follows the torn shape of the tape. */
+  filter: drop-shadow(0 1px 1.2px rgba(40, 25, 10, 0.3));
+}
+.tape-body {
+  position: absolute;
+  overflow: hidden;
+}
+.tape.peek .tape-body {
+  opacity: 0.35;
+}
+.tape.draft .tape-body {
+  opacity: 0.65;
+}
+.tape.selected {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+}
+.tape-question {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: 'Noteworthy', 'Marker Felt', 'Segoe Print', 'Comic Sans MS', cursive;
+  font-weight: 700;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* Study mode: the tape you should look at next */
+.tape.state-current {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  animation: tape-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tape-pulse {
+  50% {
+    outline-color: rgba(217, 90, 67, 0.25);
+  }
+}
+
+/* Peeling off: lifts from the left, flies off to the upper right. */
+.tape-body.peel {
+  transform-origin: 100% 50%;
+  animation: tape-peel 0.6s cubic-bezier(0.3, 0.1, 0.3, 1) forwards;
+}
+@keyframes tape-peel {
+  30% {
+    transform: translateY(-6%) rotate(-3deg) scale(1.03);
+  }
+  100% {
+    transform: translate(35%, -70%) rotate(16deg) scale(0.92);
+    opacity: 0;
+  }
+}
+
+/* Where a peeled tape was */
+.tape-outline {
+  position: absolute;
+  inset: -2px;
+  border: 2px dashed rgba(90, 70, 50, 0.45);
+  border-radius: 3px;
+  animation: fade-in 0.4s ease-out;
+}
+.tape-badge {
+  position: absolute;
+  top: -11px;
+  right: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font: 700 14px/22px system-ui, sans-serif;
+  text-align: center;
+}
+.tape-badge.got {
+  background: #3f9d6a;
+}
+.tape-badge.missed {
+  background: var(--danger);
+}
+
+/* Resize handles of the selected tape */
+.handle {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  touch-action: none;
+}
+.handle.nw {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+.handle.ne {
+  left: 100%;
+  top: 0;
+  cursor: nesw-resize;
+}
+.handle.sw {
+  left: 0;
+  top: 100%;
+  cursor: nesw-resize;
+}
+.handle.se {
+  left: 100%;
+  top: 100%;
+  cursor: nwse-resize;
+}
+
+/* --- Post-its ------------------------------------------------------------ */
+
+.postit {
+  position: absolute;
+  transform: rotate(var(--tilt));
+  filter: drop-shadow(0 2px 2px rgba(40, 25, 10, 0.25)) drop-shadow(0 6px 8px rgba(40, 25, 10, 0.12));
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.postit.open {
+  transform: rotate(0deg) scale(1.08);
+}
+.postit-paper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12% 10% 0;
+  overflow: hidden;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0) 40%), var(--note);
+  /* Cut the bottom-right corner off… */
+  clip-path: polygon(0 0, 100% 0, 100% 76%, 76% 100%, 0 100%);
+}
+/* …and show it folded over. */
+.postit::after {
+  content: '';
+  position: absolute;
+  left: 76%;
+  top: 76%;
+  width: 24%;
+  height: 24%;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.05)), var(--note);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.postit-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #3b3326;
+  font-family: 'Noteworthy', 'Marker Felt', 'Segoe Print', 'Comic Sans MS', cursive;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  word-break: break-word;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  pointer-events: none;
+}
+.postit-lines {
+  width: 80%;
+  height: 50%;
+  margin-top: 6%;
+  background: repeating-linear-gradient(180deg, transparent 0 22%, rgba(60, 45, 20, 0.28) 22% 27%);
+  pointer-events: none;
+}

@@ -1,10 +1,11 @@
 import { memo } from 'react';
 import { PageImage } from './PageImage.jsx';
 import { PdfPageCanvas } from './PdfPageCanvas.jsx';
+import { PageOverlay } from '../overlay/PageOverlay.jsx';
 
-// One page in the stack. Later milestones add the annotation overlay
-// (ink, post-its, tape, text) on top of the page picture.
-export const PageView = memo(function PageView({ page, rect, view }) {
+// One page in the stack: the page picture, and the overlay (tape, post-its…)
+// on top of it.
+export const PageView = memo(function PageView({ page, rect, view, overlay }) {
   const onScreen = view && rect.y < view.bottom && rect.y + rect.h > view.top;
   return (
     <div
@@ -16,6 +17,7 @@ export const PageView = memo(function PageView({ page, rect, view }) {
       {page.kind === 'pdf' && (
         <PdfPageCanvas page={page} rect={rect} view={view} priority={onScreen ? 1 : 2} />
       )}
+      {overlay && <PageOverlay page={page} pageHeight={rect.h} scale={view?.scale} overlay={overlay} />}
     </div>
   );
 });

@@ -1,0 +1,305 @@
+/* --- Bottom toolbar (edit) and study bar ------------------------------ */
+
+.toolbar-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: calc(14px + var(--safe-bottom));
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 16px);
+  transform: translateX(-50%);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgba(40, 25, 10, 0.18), 0 0 0 1px var(--line);
+}
+.toolbar-sep {
+  width: 1px;
+  height: 32px;
+  margin: 0 3px;
+  background: var(--line);
+}
+.tool {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 58px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.tool:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.tool.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.tool:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.tool-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+.tool-dot {
+  position: absolute;
+  top: 6px;
+  right: 9px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 2.5px rgba(0, 0, 0, 0.15);
+}
+
+.tool-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgba(40, 25, 10, 0.18), 0 0 0 1px var(--line);
+  animation: pop-in 0.12s ease-out;
+}
+
+.swatches {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.swatch.on {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink);
+}
+.patterns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pattern {
+  width: 46px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.pattern.on {
+  border-color: var(--ink);
+}
+
+/* --- Panels attached to an item (post-it card, tape options) ----------- */
+
+.popover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70;
+}
+
+.postit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(340px, calc(100vw - 16px));
+  padding: 8px 12px 14px;
+  border-radius: 3px;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 35%), var(--note);
+  box-shadow: 0 14px 40px rgba(40, 25, 10, 0.3), 0 2px 6px rgba(40, 25, 10, 0.2);
+  animation: card-in 0.18s ease-out;
+  transform-origin: 0 0;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+.card-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-bar .swatch {
+  width: 24px;
+  height: 24px;
+}
+.card-title {
+  min-width: 0;
+  padding: 4px 2px;
+  border: none;
+  border-bottom: 1px solid rgba(60, 45, 20, 0.2);
+  background: transparent;
+  color: #3b3326;
+  font-family: 'Noteworthy', 'Marker Felt', 'Segoe Print', 'Comic Sans MS', cursive;
+  font-size: 20px;
+  font-weight: 700;
+  outline: none;
+}
+.card-title.read {
+  flex: 1;
+  border: none;
+}
+.card-text {
+  min-height: 150px;
+  max-height: 45vh;
+  padding: 4px 2px;
+  border: none;
+  background: transparent;
+  color: #2b2620;
+  font-size: 17px;
+  line-height: 1.45;
+  outline: none;
+  resize: none;
+}
+.card-text.read {
+  min-height: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.tape-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(330px, calc(100vw - 16px));
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgba(40, 25, 10, 0.25), 0 0 0 1px var(--line);
+  animation: pop-in 0.15s ease-out;
+}
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* --- Study mode ---------------------------------------------------------- */
+
+.button.study {
+  margin: 0 4px;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.study-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgba(40, 25, 10, 0.18), 0 0 0 1px var(--line);
+  animation: pop-in 0.15s ease-out;
+}
+.study-bar.answer {
+  flex-direction: column;
+  padding: 12px 16px;
+}
+.study-hint {
+  font-weight: 600;
+}
+.study-progress {
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.study-progress .good {
+  color: #3f9d6a;
+}
+.study-progress .bad {
+  color: var(--danger);
+}
+.study-question {
+  max-width: min(520px, 80vw);
+  font-family: 'Noteworthy', 'Marker Felt', 'Segoe Print', 'Comic Sans MS', cursive;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+.study-buttons {
+  display: flex;
+  gap: 10px;
+}
+.button.got {
+  min-width: 140px;
+  background: #3f9d6a;
+  border-color: #3f9d6a;
+  color: #fff;
+}
+.button.missed {
+  min-width: 140px;
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.study-summary .summary-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.summary-score .big {
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+}
+.summary-bars {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+}
+.summary-bars .good {
+  background: #3f9d6a;
+}
+.summary-bars .bad {
+  background: var(--danger);
+}
+.dialog-buttons.wrap {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .tool {
+    width: 48px;
+  }
+  .button.got,
+  .button.missed {
+    min-width: 120px;
+  }
+}

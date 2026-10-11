@@ -26,6 +26,15 @@ export async function cleanUpOrphans() {
       const sourceIds = await db.sourceFiles.toCollection().primaryKeys();
       const deadSourceIds = sourceIds.filter((id) => !usedSourceIds.has(id));
       if (deadSourceIds.length) await db.sourceFiles.bulkDelete(deadSourceIds);
+
+      // Study stats of tapes that were deleted.
+      const tapeIds = new Set();
+      await db.annotations.each((doc) => {
+        for (const item of doc.items) if (item.type === 'tape') tapeIds.add(item.id);
+      });
+      const statIds = await db.tapeStats.toCollection().primaryKeys();
+      const deadStats = statIds.filter((id) => !tapeIds.has(id));
+      if (deadStats.length) await db.tapeStats.bulkDelete(deadStats);
     },
   );
 }

@@ -5,7 +5,8 @@
 // 'mouse'. This file decides what each pointer does:
 //   - navigation: pan with one finger, pinch-zoom with two, fling to scroll
 //   - taps: one-finger tap, two-finger tap (undo), three-finger tap (redo)
-//   - tools (drawing etc., from milestone 3): handed to `routePointer`
+//   - tools (tape, moving notes, later drawing): `routePointer(e)` decides;
+//     it returns 'navigate' or a handler { move(e), up(e), cancel() }
 // It also does palm rejection: while the Pencil is on the screen, fingers
 // are ignored, and if a resting palm moved the page just before the Pencil
 // touched down, that movement is undone.
@@ -27,15 +28,16 @@ export class GestureController {
    * options: {
    *   getCamera(), setCamera(cam), clampScale(scale),
    *   onGestureStart(), onGestureEnd(),
-   *   onTap({ x, y, pointerType }), onUndo(), onRedo(),
+   *   onTap({ x, y, pointerType, target }), onUndo(), onRedo(),
    *   onPencilSeen(),
-   *   routePointer(event) -> 'navigate' | a tool handler (milestone 3)
+   *   routePointer(event) -> 'navigate' | { move(e), up(e), cancel() }
    * }
    */
   constructor(element, options) {
     this.el = element;
     this.o = options;
-    this.pointers = new Map(); // pointerId -> { x, y, startX, startY, type }
+    this.pointers = new Map(); // navigation pointers: pointerId -> { x, y, startX, startY, type }
+    this.tools = new Map(); // tool pointers: pointerId -> { handler, type, x, y }
     this.penDown = false;
     this.gesture = null; // the current navigation gesture
     this.last = null; // centroid/spread of the pointers at the previous event
@@ -86,9 +88,6 @@ export class GestureController {
       return; // right-click etc.
     }
 
-    const route = this.o.routePointer?.(e) ?? 'navigate';
-    if (route !== 'navigate') return; // tools arrive in milestone 3
-
     if (e.pointerType !== 'touch') {
       // Keep receiving events even if the mouse/Pencil leaves the element.
       try {
@@ -98,16 +97,37 @@ export class GestureController {
       }
     }
     this.stopInertia();
-    this.pointers.set(e.pointerId, {
-      x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, type: e.pointerType,
-    });
+
+    if (e.pointerType === 'touch') {
+      // A second finger while one finger uses a tool (no Pencil): it was a
+      // pinch after all. Cancel the tool and navigate with both fingers.
+      for (const [id, tool] of this.tools) {
+        if (tool.type !== 'touch') continue;
+        tool.handler.cancel();
+        this.tools.delete(id);
+        this.addNavigationPointer(id, tool.x, tool.y, 'touch');
+      }
+    }
+
+    // Tools only get a pointer when nothing else is going on with fingers.
+    const navigating = this.pointers.size > 0;
+    const route = navigating ? 'navigate' : this.o.routePointer?.(e) ?? 'navigate';
+    if (route !== 'navigate') {
+      this.tools.set(e.pointerId, { handler: route, type: e.pointerType, x: e.clientX, y: e.clientY });
+      return;
+    }
+    this.addNavigationPointer(e.pointerId, e.clientX, e.clientY, e.pointerType);
+  }
+
+  addNavigationPointer(pointerId, x, y, type) {
+    this.pointers.set(pointerId, { x, y, startX: x, startY: y, type });
     if (!this.gesture) {
       this.gesture = {
         startTime: performance.now(),
         startCamera: this.o.getCamera(),
         maxPointers: 0,
         moved: false,
-        type: e.pointerType,
+        type,
       };
       this.samples = [];
       this.o.onGestureStart?.();
@@ -122,6 +142,13 @@ export class GestureController {
       this.o.onPencilSeen?.(); // Pencil hovering above the screen
       return;
     }
+    const tool = this.tools.get(e.pointerId);
+    if (tool) {
+      tool.x = e.clientX;
+      tool.y = e.clientY;
+      tool.handler.move(e);
+      return;
+    }
     const p = this.pointers.get(e.pointerId);
     if (!p) return;
     p.x = e.clientX;
@@ -132,6 +159,13 @@ export class GestureController {
 
   onPointerUp(e) {
     if (e.pointerType === 'pen') this.penDown = false;
+    const tool = this.tools.get(e.pointerId);
+    if (tool) {
+      this.tools.delete(e.pointerId);
+      if (e.type === 'pointercancel') tool.handler.cancel();
+      else tool.handler.up(e);
+      return;
+    }
     if (!this.pointers.has(e.pointerId)) return;
     this.pointers.delete(e.pointerId);
     if (this.pointers.size > 0) {
@@ -184,7 +218,10 @@ export class GestureController {
 
     if (!cancelled && !g.moved) {
       if (g.maxPointers === 1 && duration < TAP_MAX_MS) {
-        this.o.onTap?.({ x: e.clientX, y: e.clientY, pointerType: e.pointerType });
+        // What's under the finger (e.target can be the viewer itself when
+        // the pointer was captured, so look it up by position).
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        this.o.onTap?.({ x: e.clientX, y: e.clientY, pointerType: e.pointerType, target });
       } else if (g.maxPointers === 2 && g.type === 'touch' && duration < MULTI_TAP_MAX_MS) {
         this.o.onUndo?.();
       } else if (g.maxPointers === 3 && g.type === 'touch' && duration < MULTI_TAP_MAX_MS) {
@@ -241,6 +278,13 @@ export class GestureController {
   // The Pencil just touched the screen: any finger gesture going on is a
   // palm. Drop it, and undo the scrolling it caused if it is recent/small.
   rejectPalm() {
+    // A palm that started using a tool (e.g. dragging a note): undo that too.
+    for (const [id, tool] of this.tools) {
+      if (tool.type === 'touch') {
+        tool.handler.cancel();
+        this.tools.delete(id);
+      }
+    }
     const g = this.gesture;
     if (!g || g.type !== 'touch') return;
     let travel = 0;

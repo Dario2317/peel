@@ -81,6 +81,50 @@ export const PageIcon = (p) => (
     <path d="M14 2v6h6" />
   </Icon>
 );
+export const HandIcon = (p) => (
+  <Icon {...p}>
+    <path d="M18 11V6a2 2 0 0 0-4 0v5" />
+    <path d="M14 10V4a2 2 0 0 0-4 0v6" />
+    <path d="M10 10.5V6a2 2 0 0 0-4 0v8" />
+    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+  </Icon>
+);
+export const NoteIcon = (p) => (
+  <Icon {...p}>
+    <path d="M4 4h16v11l-5 5H4z" />
+    <path d="M15 20v-5h5" />
+  </Icon>
+);
+export const TapeIcon = (p) => (
+  <Icon {...p}>
+    <path d="M3 8.5l2-1 1.5 1 1.5-1h11l1.5 1 1.5-1v7l-1.5 1-1.5-1H8l-1.5 1-1.5-1-2 1z" />
+    <path d="M9 10.5l2 2M13 10.5l2 2" opacity="0.6" />
+  </Icon>
+);
+export const UndoIcon = (p) => (
+  <Icon {...p}>
+    <path d="M9 14L4 9l5-5" />
+    <path d="M4 9h11a5 5 0 0 1 0 10h-3" />
+  </Icon>
+);
+export const RedoIcon = (p) => (
+  <Icon {...p}>
+    <path d="M15 14l5-5-5-5" />
+    <path d="M20 9H9a5 5 0 0 0 0 10h3" />
+  </Icon>
+);
+export const EyeIcon = (p) => (
+  <Icon {...p}>
+    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+export const StudyIcon = (p) => (
+  <Icon {...p}>
+    <path d="M22 10L12 5 2 10l10 5 10-5z" />
+    <path d="M6 12v5c3 2.5 9 2.5 12 0v-5" />
+  </Icon>
+);
 export const ShareIcon = (p) => (
   <Icon {...p}>
     <path d="M12 3v13M7 8l5-5 5 5" />

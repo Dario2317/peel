@@ -3,11 +3,19 @@ import { GestureController } from './input.js';
 import { Viewport } from './viewport.js';
 import { computeLayout } from './layout.js';
 import { PageView } from './PageView.jsx';
-import { getSetting, setSetting } from '../db/settings.js';
+import { markPencilSeen } from './pencil.js';
 
-// The scrolling, zoomable stack of pages.
-// `ref` gives the notebook screen commands like fitWidth() and goToPage(i).
-export function Viewer({ pages, initialView, onCurrentPageChange, onViewSettled, onTap, onUndo, onRedo, ref }) {
+/**
+ * The scrolling, zoomable stack of pages.
+ *   overlay:      what to draw on the pages (store, mode, selection…), or null
+ *   routePointer: decides if a touch/Pencil/mouse press uses a tool or navigates
+ *   onTap, onUndo, onRedo: taps and two/three-finger taps
+ * `ref` gives the notebook screen commands like fitWidth() and goToPage(i).
+ */
+export function Viewer({
+  pages, initialView, overlay, routePointer,
+  onCurrentPageChange, onViewSettled, onTap, onUndo, onRedo, ref,
+}) {
   const containerRef = useRef(null);
   const worldRef = useRef(null);
   const viewportRef = useRef(null);
@@ -20,11 +28,14 @@ export function Viewer({ pages, initialView, onCurrentPageChange, onViewSettled,
   // Callbacks change on every render; keep the latest in a ref so the
   // engine (created once) always calls the current ones.
   const props = useRef();
-  props.current = { onCurrentPageChange, onViewSettled, onTap, onUndo, onRedo, initialView, layout, pageIds };
+  props.current = {
+    onCurrentPageChange, onViewSettled, onTap, onUndo, onRedo, routePointer, initialView, layout, pageIds,
+  };
 
   // Create the engine and the input handler once.
   useLayoutEffect(() => {
-    const viewport = new Viewport(worldRef.current, {
+    const container = containerRef.current;
+    const viewport = new Viewport(container, worldRef.current, {
       onRange: (first, last) => setRange([first, last]),
       onCurrentPage: (index) => props.current.onCurrentPageChange?.(index),
       onSettle: (settled) => {
@@ -36,27 +47,20 @@ export function Viewer({ pages, initialView, onCurrentPageChange, onViewSettled,
     viewport.setLayout(props.current.layout, props.current.pageIds);
     if (import.meta.env.DEV) window.__viewport = viewport; // for debugging in the console
 
-    let pencilKnown = false;
-    getSetting('pencilSeen', false).then((seen) => (pencilKnown ||= seen));
-
-    const gestures = new GestureController(containerRef.current, {
+    const gestures = new GestureController(container, {
       getCamera: () => viewport.getCamera(),
       setCamera: (cam) => viewport.setCamera(cam),
       clampScale: (scale) => viewport.clampScale(scale),
       onGestureStart: () => viewport.beginInteraction(),
       onGestureEnd: () => viewport.endInteraction(),
+      routePointer: (e) => props.current.routePointer?.(e) ?? 'navigate',
       onTap: (info) => props.current.onTap?.(info),
       onUndo: () => props.current.onUndo?.(),
       onRedo: () => props.current.onRedo?.(),
-      onPencilSeen: () => {
-        if (pencilKnown) return;
-        pencilKnown = true;
-        setSetting('pencilSeen', true); // remembered: from now on fingers never draw
-      },
+      onPencilSeen: markPencilSeen,
     });
 
     // Size changes (first layout, rotating the iPad, Split View) keep your place.
-    const container = containerRef.current;
     const measure = () => {
       const { clientWidth, clientHeight } = container;
       if (!clientWidth || !clientHeight) return;
@@ -81,9 +85,14 @@ export function Viewer({ pages, initialView, onCurrentPageChange, onViewSettled,
   }, [layout, pageIds]);
 
   useImperativeHandle(ref, () => ({
+    get viewport() {
+      return viewportRef.current;
+    },
     fitWidth: () => viewportRef.current.fitWidth(),
     goToPage: (index) => viewportRef.current.goToPage(index),
     zoomBy: (factor) => viewportRef.current.zoomBy(factor),
+    showRegion: (index, rect) => viewportRef.current.showRegion(index, rect),
+    ensurePageVisible: (index) => viewportRef.current.ensurePageVisible(index),
   }), []);
 
   // Keyboard: arrows/Page Up/Down/space scroll, Ctrl/Cmd +/−/0 zoom.
@@ -117,7 +126,9 @@ export function Viewer({ pages, initialView, onCurrentPageChange, onViewSettled,
 
   const children = [];
   for (let i = Math.max(0, range[0]); i <= Math.min(range[1], pages.length - 1); i++) {
-    children.push(<PageView key={pages[i].id} page={pages[i]} rect={layout.rects[i]} view={view} />);
+    children.push(
+      <PageView key={pages[i].id} page={pages[i]} rect={layout.rects[i]} view={view} overlay={overlay} />,
+    );
   }
 
   return (

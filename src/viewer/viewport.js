@@ -11,9 +11,11 @@ import { clamp } from '../utils/platform.js';
 const SETTLE_MS = 150;
 
 export class Viewport {
-  constructor(world, callbacks) {
+  constructor(container, world, callbacks) {
+    this.container = container; // the visible area
     this.world = world; // the element holding all pages
     this.cb = callbacks;
+    this.frameListeners = new Set();
     this.camera = null;
     this.size = { width: 0, height: 0 };
     this.layout = { rects: [], height: 0 };
@@ -146,6 +148,78 @@ export class Viewport {
     this.settleSoon();
   }
 
+  // Scrolls so that a rectangle of a page (fractions 0–1) is on screen,
+  // centered if it wasn't fully visible. Keeps the zoom.
+  showRegion(index, rect) {
+    const r = this.layout.rects[index];
+    if (!r || !this.ready) return;
+    const view = this.visibleWorldRect();
+    const left = r.x + rect.x * r.w;
+    const top = r.y + rect.y * r.h;
+    const right = left + rect.w * r.w;
+    const bottom = top + rect.h * r.h;
+    if (left >= view.left && right <= view.right && top >= view.top && bottom <= view.bottom) return;
+    const { scale } = this.camera;
+    this.setCamera({
+      scale,
+      x: this.size.width / 2 - ((left + right) / 2) * scale,
+      y: this.size.height / 2 - ((top + bottom) / 2) * scale,
+    });
+    this.settleSoon();
+  }
+
+  // Scrolls to a page only if none of it is on screen.
+  ensurePageVisible(index) {
+    const r = this.layout.rects[index];
+    if (!r || !this.ready) return;
+    const view = this.visibleWorldRect();
+    if (r.y + r.h < view.top || r.y > view.bottom) this.goToPage(index);
+  }
+
+  // --- Converting positions ------------------------------------------------
+
+  /**
+   * Screen point → position on a page, as fractions of the page (0–1).
+   * With `index`, always measures on that page (values may be <0 or >1);
+   * without, finds the page under the point (null if there is none).
+   */
+  clientToPage(clientX, clientY, index = null) {
+    if (!this.ready) return null;
+    const box = this.container.getBoundingClientRect();
+    const { x, y, scale } = this.camera;
+    const wx = (clientX - box.left - x) / scale;
+    const wy = (clientY - box.top - y) / scale;
+    const { rects } = this.layout;
+    let i = index;
+    if (i === null) {
+      i = pageIndexAt(rects, wy);
+      const r = rects[i];
+      if (!r || wy < r.y || wy > r.y + r.h || wx < r.x || wx > r.x + r.w) return null;
+    }
+    const r = rects[i];
+    return { index: i, pageId: this.pageIds[i], x: (wx - r.x) / r.w, y: (wy - r.y) / r.h, rect: r };
+  }
+
+  // A rectangle on a page (fractions) → where it is on screen (client px).
+  pageRectToClient(index, rect) {
+    const r = this.layout.rects[index];
+    if (!r || !this.ready) return null;
+    const box = this.container.getBoundingClientRect();
+    const { x, y, scale } = this.camera;
+    return {
+      left: box.left + x + (r.x + rect.x * r.w) * scale,
+      top: box.top + y + (r.y + rect.y * r.h) * scale,
+      width: rect.w * r.w * scale,
+      height: rect.h * r.h * scale,
+    };
+  }
+
+  // Called after every frame the pages moved (used by popovers to follow).
+  addFrameListener(callback) {
+    this.frameListeners.add(callback);
+    return () => this.frameListeners.delete(callback);
+  }
+
   // --- Interaction state ---------------------------------------------------
 
   // While you are touching the screen the pages are moved as one GPU layer
@@ -206,6 +280,7 @@ export class Viewport {
       this.cb.onCurrentPage?.(current);
     }
 
+    this.frameListeners.forEach((callback) => callback());
     if (!this.interacting) this.settleSoon();
   }
 }
