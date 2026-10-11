@@ -15,7 +15,15 @@
   --tap: 44px; /* comfortable finger size for buttons */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Space kept free at the left of the top bars (see .is-ipad below). */
+  --corner-left: 0px;
   color-scheme: light;
+}
+
+/* iPad Home Screen app: the system window controls sit in the top-left
+   corner, so nothing of ours goes there. */
+.is-ipad.is-standalone {
+  --corner-left: 76px;
 }
 
 * {

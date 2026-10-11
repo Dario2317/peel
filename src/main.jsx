@@ -1,7 +1,10 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App.jsx';
 import { cleanUpOrphans } from './db/cleanup.js';
+import { markPlatform } from './utils/platform.js';
 import './styles/base.css';
+
+markPlatform();
 
 // Safari's own pinch-zoom would zoom the whole app (toolbar included).
 // We have our own zoom for the pages, so switch Safari's off.

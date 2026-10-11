@@ -42,6 +42,7 @@ export class GestureController {
     this.samples = []; // recent positions, to measure fling speed
     this.inertiaFrame = 0;
     this.gestureScale = null; // Safari trackpad pinch
+    this.lastTouchAt = -Infinity;
 
     this.handlers = {
       pointerdown: this.onPointerDown.bind(this),
@@ -76,10 +77,11 @@ export class GestureController {
       this.penDown = true;
       this.rejectPalm();
     } else if (e.pointerType === 'touch') {
+      this.lastTouchAt = performance.now();
       // While the Pencil is down every finger is ignored (palm rejection).
+      // (We don't judge palms by contact size: iPad reports normal
+      // fingertips as quite large, and iPadOS already rejects palms itself.)
       if (this.penDown) return;
-      // Very large contact areas are palms, not fingertips.
-      if (e.width > 60 && e.height > 60) return;
     } else if (e.button !== 0 && e.button !== 1) {
       return; // right-click etc.
     }
@@ -115,6 +117,7 @@ export class GestureController {
   }
 
   onPointerMove(e) {
+    if (e.pointerType === 'touch') this.lastTouchAt = performance.now();
     if (e.pointerType === 'pen' && e.buttons === 0) {
       this.o.onPencilSeen?.(); // Pencil hovering above the screen
       return;
@@ -279,12 +282,13 @@ export class GestureController {
     this.o.onGestureEnd?.();
   }
 
-  // Safari's own pinch events (trackpad on a Mac, and fingers on iPad).
-  // On iPad we already handle the fingers ourselves, so we only stop Safari
-  // from zooming the whole page; on a Mac trackpad we zoom the pages.
+  // Safari's own pinch events (trackpad on a Mac/iPad keyboard, and fingers
+  // on iPad). Fingers are already handled above, so we only stop Safari from
+  // zooming the whole page; for a trackpad (no touches) we zoom the pages.
   onSafariGesture(e) {
     e.preventDefault();
-    if (this.pointers.size > 0 || !this.o.getCamera()) return;
+    const recentTouch = performance.now() - this.lastTouchAt < 1000;
+    if (recentTouch || this.pointers.size > 0 || this.penDown || !this.o.getCamera()) return;
     const rect = this.el.getBoundingClientRect();
     if (e.type === 'gesturestart') {
       this.gestureScale = this.o.getCamera().scale;
