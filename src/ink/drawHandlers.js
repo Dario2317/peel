@@ -47,9 +47,11 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone }) {
  *   getStrokes(), removeStrokes(ids): read / remove (live, not undoable)
  *   onDone(): make the whole erase one undo step
  *   onCancel(): put everything back
+ *   onPoint(clientX, clientY): optional, to show the eraser circle while erasing
  */
-export function eraseStrokes(e, { toWorld, radius, getStrokes, removeStrokes, onDone, onCancel }) {
+export function eraseStrokes(e, { toWorld, radius, getStrokes, removeStrokes, onDone, onCancel, onPoint }) {
   const erase = (clientX, clientY) => {
+    onPoint?.(clientX, clientY);
     const [x, y] = toWorld(clientX, clientY);
     const r = radius();
     const hit = getStrokes().filter((s) => strokeHit(s, x, y, r));

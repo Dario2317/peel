@@ -18,11 +18,12 @@ export function hasRealPressure(flatPoints) {
 }
 
 function strokeOptions(stroke, finished) {
+  const smooth = stroke.smooth ?? 0.5; // 0 = raw, 1 = very smooth
   return {
     size: stroke.size,
     thinning: stroke.pressure ? 0.55 : 0, // no pressure → even width, like a fineliner
-    smoothing: 0.6,
-    streamline: 0.4,
+    smoothing: 0.3 + 0.6 * smooth, // softer outline
+    streamline: 0.1 + 0.6 * smooth, // steadier line (follows the tip a bit more loosely)
     simulatePressure: false,
     last: finished,
   };

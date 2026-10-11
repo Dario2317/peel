@@ -12,8 +12,9 @@ What's done, what's next, and requests to remember.
   next time), undo/redo, post-its.
 - **Post-its, second version** — closed notes are small see-through pins that
   keep the same size on screen at any zoom; opening one shows a full-screen
-  lined board (like Freeform) to draw on with the Pencil, scroll and zoom,
-  with optional typing.
+  dotted board (like Freeform) with a white, black or note-color background,
+  to draw on with the Pencil (pen, marker, eraser, smoothing), scroll and
+  zoom (zoom pill bottom-left), and text boxes you can place anywhere.
 
 ## Next
 
@@ -32,6 +33,13 @@ What's done, what's next, and requests to remember.
   - offline/PWA polish
 
 ## Requests to fit in
+
+- **Zoom window** (like GoodNotes), right after milestone 3: a box on the
+  page and a big writing area at the bottom; what you write there is shrunk
+  into the box, for precise small handwriting.
+- **iPadOS three-finger undo bar**: not possible for a web app (the system
+  only connects it to text fields). Peel uses two-finger tap = undo,
+  three-finger tap = redo, plus on-screen buttons.
 
 - **Dark mode** for the whole interface.
 - **Invert pages** switch: show white PDF/screenshot pages dark (for dark

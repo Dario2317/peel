@@ -83,3 +83,16 @@
 .size-dot.on {
   background: var(--desk);
 }
+.smooth-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.smooth-control input {
+  width: 90px;
+  accent-color: var(--accent);
+}

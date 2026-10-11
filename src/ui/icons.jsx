@@ -133,6 +133,14 @@ export const HighlighterIcon = (p) => (
     <path d="M3 22h8" strokeWidth="3" opacity="0.5" />
   </Icon>
 );
+export const PaletteIcon = (p) => (
+  <Icon {...p}>
+    <path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.8-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z" />
+    <circle cx="7.5" cy="11" r="1.2" fill="currentColor" />
+    <circle cx="10.5" cy="7" r="1.2" fill="currentColor" />
+    <circle cx="15" cy="7.5" r="1.2" fill="currentColor" />
+  </Icon>
+);
 export const ExpandIcon = (p) => (
   <Icon {...p}>
     <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />

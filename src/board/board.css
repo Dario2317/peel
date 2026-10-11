@@ -1,12 +1,32 @@
-/* An opened post-it: a full-screen lined board in the note's color. */
+/* An opened post-it: a full-screen dotted board (like Freeform).
+   Three backgrounds: white, black, or the note's color. */
 .note-board {
+  --board-bg: #ffffff;
+  --board-bar: #f6f5f2;
+  --board-text: #2b2620;
+  --dot: rgba(40, 30, 20, 0.22);
+  --board-line: rgba(40, 30, 20, 0.12);
   position: fixed;
   inset: 0;
   z-index: 85;
   display: flex;
   flex-direction: column;
-  background: var(--note);
+  background: var(--board-bg);
+  color: var(--board-text);
   animation: board-in 0.18s ease-out;
+}
+.note-board.bg-black {
+  --board-bg: #0b0b0c;
+  --board-bar: #1c1c1e;
+  --board-text: #f2f2f2;
+  --dot: rgba(255, 255, 255, 0.24);
+  --board-line: rgba(255, 255, 255, 0.12);
+}
+.note-board.bg-note {
+  --board-bg: var(--note);
+  --board-bar: var(--note);
+  --dot: rgba(60, 45, 20, 0.28);
+  --board-line: rgba(60, 45, 20, 0.16);
 }
 @keyframes board-in {
   from {
@@ -17,45 +37,100 @@
 
 .board-bar {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: calc(6px + var(--safe-top)) 10px 6px calc(10px + var(--corner-left));
-  background: var(--note);
-  border-bottom: 1px solid rgba(60, 45, 20, 0.15);
+  background: var(--board-bar);
+  border-bottom: 1px solid var(--board-line);
 }
 .board-bar .spacer {
   flex: 1;
 }
 .board-bar .icon-button {
-  color: #2b2620;
+  color: var(--board-text);
 }
-.board-color {
-  margin: 0 8px;
-  box-shadow: 0 0 0 1.5px rgba(60, 45, 20, 0.35);
-}
-.board-colors {
-  position: absolute;
-  top: 100%;
-  right: 10px;
-  display: flex;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  animation: pop-in 0.12s ease-out;
+.bg-black .board-bar .button {
+  background: #2c2c2e;
+  border-color: #3a3a3c;
+  color: #f2f2f2;
 }
 
+/* Popup menus (background/colors at the top, zoom at the bottom) */
+.board-menu {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  animation: pop-in 0.12s ease-out;
+}
+.board-menu.look {
+  top: 100%;
+  right: 10px;
+  width: min(330px, calc(100vw - 20px));
+}
+.menu-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.bg-choices {
+  display: flex;
+  gap: 8px;
+}
+.bg-choice {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--desk);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.bg-choice.on {
+  border-color: var(--ink);
+}
+.bg-swatch {
+  width: 44px;
+  height: 30px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  background-image: radial-gradient(circle, rgba(128, 128, 128, 0.6) 1px, transparent 1.5px);
+  background-size: 8px 8px;
+}
+.bg-choice.bg-white .bg-swatch {
+  background-color: #fff;
+}
+.bg-choice.bg-black .bg-swatch {
+  background-color: #0b0b0c;
+}
+.bg-choice.bg-note .bg-swatch {
+  background-color: var(--note);
+}
+
+/* The board itself: dots that follow the zoom (set in NoteBoard.jsx) */
 .board-surface {
   position: relative;
   flex: 1;
   overflow: hidden;
-  /* Ruled lines (size and position follow the zoom, set in NoteBoard.jsx) */
-  background-color: var(--note);
-  background-image: linear-gradient(to bottom, transparent calc(100% - 1px), rgba(60, 45, 20, 0.2) calc(100% - 1px));
-  background-size: 100% 36px;
+  background-color: var(--board-bg);
+  background-image: radial-gradient(circle, var(--dot) 1.1px, transparent 1.6px);
+  background-size: 24px 24px;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
@@ -64,6 +139,9 @@
 .board-surface.drawing {
   cursor: crosshair;
 }
+.board-surface.typing {
+  cursor: text;
+}
 .board-world {
   position: absolute;
   top: 0;
@@ -71,27 +149,98 @@
   transform-origin: 0 0;
 }
 
-/* Typed text sits on the ruled lines */
-.board-text {
+/* Text boxes */
+.board-textbox {
   position: absolute;
-  top: 40px;
+  min-height: 1.4em;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.board-textbox.editing {
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.board-textbox textarea {
+  display: block;
+  width: 100%;
   margin: 0;
   padding: 0;
   border: none;
   background: transparent;
-  color: #2b2620;
-  font: 20px/36px system-ui, -apple-system, sans-serif;
-  white-space: pre-wrap;
-  word-break: break-word;
+  font-family: inherit;
+  line-height: 1.4;
   outline: none;
   resize: none;
   overflow: hidden;
-}
-.board-text.editing {
-  min-height: 72px;
-  background: rgba(255, 255, 255, 0.3);
   -webkit-user-select: text;
   user-select: text;
+}
+/* Drag this to move the text */
+.text-handle {
+  position: absolute;
+  top: 50%;
+  left: -34px;
+  width: 22px;
+  height: 22px;
+  margin-top: -11px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: move;
+  touch-action: none;
+}
+.text-handle::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-top: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+}
+
+/* Zoom: bottom left, like Freeform */
+.board-zoom {
+  position: absolute;
+  left: calc(14px + env(safe-area-inset-left, 0px));
+  bottom: calc(14px + var(--safe-bottom));
+  z-index: 3;
+}
+.zoom-pill {
+  min-width: 64px;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--line);
+  font: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.board-menu.zoom {
+  bottom: calc(100% + 8px);
+  left: 0;
+  gap: 2px;
+  padding: 6px;
+  min-width: 160px;
+}
+.board-menu.zoom button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.board-menu.zoom button:hover {
+  background: var(--desk);
 }
 
 .board-tools {
@@ -102,4 +251,34 @@
   width: max-content; /* one row when there's room, wraps on phones */
   max-width: calc(100% - 16px);
   transform: translateX(-50%);
+}
+
+/* Dark background: dark toolbars too */
+.bg-black .draw-bar,
+.bg-black .zoom-pill {
+  background: #2a2a2c;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px #3a3a3c;
+  color: #f2f2f2;
+}
+.bg-black .draw-bar .tool {
+  color: #f2f2f2;
+}
+.bg-black .draw-bar .tool.on {
+  background: rgba(217, 90, 67, 0.25);
+  color: #ff8a73;
+}
+.bg-black .size-dot.on {
+  background: #3a3a3c;
+}
+
+/* On narrower screens the zoom pill would sit under the tools: lift it. */
+@media (max-width: 1000px) {
+  .board-zoom {
+    bottom: calc(86px + var(--safe-bottom));
+  }
+}
+@media (max-width: 700px) {
+  .board-zoom {
+    bottom: calc(124px + var(--safe-bottom));
+  }
 }

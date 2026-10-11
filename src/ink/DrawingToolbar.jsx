@@ -67,6 +67,19 @@ export function DrawingToolbar({ ink, onInk, typing = false, onTyping }) {
               <span style={{ width: 5 + i * 5, height: 5 + i * 5, background: color }} />
             </button>
           ))}
+          <span className="toolbar-sep" />
+          {/* How much the line is smoothed out (0 = exactly as drawn) */}
+          <label className="smooth-control" title="Smoothing">
+            <span>Smooth</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={ink.smoothing}
+              onChange={(e) => onInk({ smoothing: Number(e.target.value) })}
+            />
+          </label>
         </div>
       )}
     </div>

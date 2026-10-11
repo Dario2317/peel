@@ -19,3 +19,13 @@ export const PEN_SIZES = [1.6, 2.8, 5];
 export const HIGHLIGHT_SIZES = [10, 18, 28];
 
 export const HIGHLIGHT_OPACITY = 0.38;
+
+// Default smoothing (0 = exactly what you drew, 1 = very smooth).
+export const DEFAULT_SMOOTHING = 0.5;
+
+// On a black background, black ink is shown white (like Freeform), so
+// your notes stay readable whichever background you pick.
+const ON_DARK = { '#2b2620': '#f3efe8' };
+export function displayColor(color, dark) {
+  return (dark && ON_DARK[color]) || color;
+}
