@@ -3,9 +3,11 @@ import { App } from './App.jsx';
 import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
 import { cleanUpOrphans } from './db/cleanup.js';
 import { markPlatform } from './utils/platform.js';
+import { installFonts } from './text/fonts.js';
 import './styles/base.css';
 
 markPlatform();
+installFonts(); // the bundled fonts for text boxes
 
 // Safari's own pinch-zoom would zoom the whole app (toolbar included).
 // We have our own zoom for the pages, so switch Safari's off.

@@ -103,7 +103,18 @@ export function Viewer({
     const observer = new ResizeObserver(measure);
     observer.observe(container);
 
+    // Typing in a text box can make the browser scroll this area to show
+    // the text field; the camera does all the moving here, so undo that.
+    const unscroll = () => {
+      if (container.scrollTop || container.scrollLeft) {
+        container.scrollTop = 0;
+        container.scrollLeft = 0;
+      }
+    };
+    container.addEventListener('scroll', unscroll);
+
     return () => {
+      container.removeEventListener('scroll', unscroll);
       observer.disconnect();
       gestures.destroy();
       viewport.destroy();

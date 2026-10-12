@@ -2,7 +2,10 @@
 //   - pen, marker, eraser, lasso: draw on the page (see pageDrawing.js)
 //   - on a tape or post-it: drag it to move it (a tap opens it)
 //   - on a tape's corner handle: resize the tape
+//   - on a text box's handles: move it or change its width (fingers too)
+//   - on the zoom window's box: drag it somewhere else (fingers too)
 //   - with the tape tool on the page: drag to lay down a new tape
+//   - with the text tool: a tap makes a text box (see onTap)
 //   - anything else: pan/zoom (handled by input.js)
 // Fingers only do this when no Apple Pencil has been used yet; otherwise
 // fingers just pan, zoom and tap.
@@ -17,13 +20,15 @@ import { pageDrawingHandler } from './pageDrawing.js';
 const DRAG_SLOP = 4; // px the Pencil/mouse may move and still count as a tap
 const DRAWING_TOOLS = new Set(['pen', 'highlighter', 'eraser', 'lasso']);
 const MIN_TAPE = { width: 12, height: 6 }; // page units (a page is 1000 wide)
+const MIN_TEXT_WIDTH = 40; // page units
 
 /**
  * ctx: {
  *   getState() -> { mode, tool, tapeStyle, ink, lasso },
  *   getViewport(), store,
  *   drawing() -> what pageDrawing.js needs (viewport, wet ink, setLasso…),
- *   actions: { tapItem(pageId, itemId, pointerType), tapEmpty({ x, y, pointerType }) }
+ *   actions: { tapItem(pageId, itemId, pointerType), tapEmpty({ x, y, pointerType }),
+ *              isEditingText(itemId), getZoomBox(), setZoomBox(box), zoomBoxMoved(box) }
  * }
  * Returns { routePointer(e), onTap(info) } for the Viewer.
  */
@@ -33,9 +38,16 @@ export function createToolRouter(ctx) {
   function routePointer(e) {
     const { mode, tool } = ctx.getState();
     if (mode !== 'edit') return 'navigate';
-    if (e.pointerType === 'touch' && pencil.seen) return 'navigate';
-
     const viewport = ctx.getViewport();
+
+    // A text box's handles are small targets you aim for: fingers work too.
+    const grip = e.target.closest?.('[data-text-move]');
+    if (grip) return dragItem(e, viewport, grip.dataset.pageId, grip.dataset.textMove, { tap: false });
+    const widthHandle = e.target.closest?.('[data-text-width]');
+    if (widthHandle) return resizeText(e, viewport, widthHandle.dataset.pageId, widthHandle.dataset.textWidth);
+    if (e.target.closest?.('[data-zoom-handle]')) return dragZoomBox(e, viewport);
+
+    if (e.pointerType === 'touch' && pencil.seen) return 'navigate';
     const itemEl = e.target.closest?.('[data-item-id]');
 
     // Pen, marker, eraser, lasso: draw on the page (tapping a post-it pin
@@ -87,13 +99,17 @@ export function createToolRouter(ctx) {
     return { w: item.w, h: item.h };
   }
 
-  function dragItem(e, viewport, pageId, itemId) {
+  // Drag a tape, post-it or text box. A tap (no drag) opens it, unless
+  // `tap` is false. Text boxes may go off the page (like ink); tapes and
+  // post-its stay on it.
+  function dragItem(e, viewport, pageId, itemId, { tap = true } = {}) {
     const original = store.getItem(pageId, itemId);
     const index = viewport.pageIds.indexOf(pageId);
     if (!original || index < 0) return 'navigate';
     const rect = viewport.layout.rects[index];
     const scale = viewport.getCamera().scale;
     const start = { x: e.clientX, y: e.clientY };
+    const free = original.type === 'text';
     let current = original;
     let moved = false;
 
@@ -104,17 +120,19 @@ export function createToolRouter(ctx) {
         if (!moved && Math.hypot(dx, dy) < DRAG_SLOP) return;
         moved = true;
         const { w, h } = itemSize(original, rect, scale);
-        const next = {
-          ...original,
-          x: clamp(original.x + dx / (rect.w * scale), 0, 1 - w),
-          y: clamp(original.y + dy / (rect.h * scale), 0, 1 - h),
-        };
+        const x = original.x + dx / (rect.w * scale);
+        const y = original.y + dy / (rect.h * scale);
+        const next = { ...original, x: free ? x : clamp(x, 0, 1 - w), y: free ? y : clamp(y, 0, 1 - h) };
         store.change(pageId, current, next, { history: false });
         current = next;
       },
       up(ev) {
-        if (!moved) ctx.actions.tapItem(pageId, itemId, ev.pointerType);
-        else store.pushHistory([{ pageId, before: original, after: current }]);
+        if (!moved) {
+          if (tap) ctx.actions.tapItem(pageId, itemId, ev.pointerType);
+        } else if (!ctx.actions.isEditingText(itemId)) {
+          // (While a text is being typed, the whole edit is one undo step.)
+          store.pushHistory([{ pageId, before: original, after: current }]);
+        }
       },
       cancel() {
         if (moved) store.change(pageId, current, original, { history: false });
@@ -197,6 +215,54 @@ export function createToolRouter(ctx) {
       },
       up() {
         store.pushHistory([{ pageId, before: original, after: current }]);
+      },
+      cancel() {
+        store.change(pageId, current, original, { history: false });
+      },
+    };
+  }
+
+  // Drag the zoom window's box (page units, like the page: 1000 wide).
+  function dragZoomBox(e, viewport) {
+    const start = ctx.actions.getZoomBox();
+    if (!start) return 'navigate';
+    const scale = viewport.getCamera().scale;
+    const from = { x: e.clientX, y: e.clientY };
+    let box = start;
+    return {
+      move(ev) {
+        const x = start.x + (ev.clientX - from.x) / scale;
+        box = { ...start, x, y: start.y + (ev.clientY - from.y) / scale, lineStartX: x };
+        ctx.actions.setZoomBox(box);
+      },
+      up() {
+        ctx.actions.zoomBoxMoved(box);
+      },
+      cancel() {
+        ctx.actions.setZoomBox(start);
+      },
+    };
+  }
+
+  // Drag the right edge of a text box to change its width.
+  function resizeText(e, viewport, pageId, itemId) {
+    const original = store.getItem(pageId, itemId);
+    const index = viewport.pageIds.indexOf(pageId);
+    if (!original || index < 0) return 'navigate';
+    const minW = MIN_TEXT_WIDTH / viewport.layout.rects[index].w;
+    let current = original;
+
+    return {
+      move(ev) {
+        const p = viewport.clientToPage(ev.clientX, ev.clientY, index);
+        const next = { ...original, w: Math.max(minW, p.x - original.x) };
+        store.change(pageId, current, next, { history: false });
+        current = next;
+      },
+      up() {
+        if (current !== original && !ctx.actions.isEditingText(itemId)) {
+          store.pushHistory([{ pageId, before: original, after: current }]);
+        }
       },
       cancel() {
         store.change(pageId, current, original, { history: false });

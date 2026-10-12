@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { useHistoryState } from '../state/useAnnotations.js';
 import { colorValue, POSTIT_COLORS, TAPE_COLORS, TAPE_PATTERNS, tapeBackground } from '../overlay/looks.js';
 import { DrawingOptions } from '../ink/DrawingToolbar.jsx';
+import { TextOptions } from '../text/TextOptions.jsx';
 import {
-  EraserIcon, EyeIcon, HandIcon, HighlighterIcon, LassoIcon, NoteIcon, PenIcon, RedoIcon, TapeIcon, UndoIcon,
+  EraserIcon, EyeIcon, HandIcon, HighlighterIcon, LassoIcon, NoteIcon, PenIcon, RedoIcon, TapeIcon, TextIcon, UndoIcon,
 } from '../ui/icons.jsx';
 import './tools.css';
 
 /**
  * The edit toolbar at the bottom of the pages. One tap switches tool:
- *   Move, Pen, Marker, Eraser, Lasso | Post-it, Tape | Undo, Redo | Peek
- * The pen and marker show their colors/sizes above the toolbar; tap
- * Post-it or Tape again for their colors.
+ *   Move, Pen, Marker, Eraser, Lasso, Text | Post-it, Tape | Undo, Redo | Peek
+ * The pen and marker show their colors/sizes above the toolbar, the text
+ * tool its font, size and color; tap Post-it or Tape again for their colors.
  *   ink / onInk: pen settings from useInkTool()
+ *   textStyle / onTextStyle / showTextOptions: the text options bar
  */
 export function Toolbar({
-  tool, onTool, store, peek, onPeek, ink, onInk,
+  tool, onTool, store, peek, onPeek, ink, onInk, textStyle, onTextStyle, showTextOptions,
   tapeStyle, onTapeStyle, postItColor, onPostItColor, onUndo, onRedo,
 }) {
   const { canUndo, canRedo } = useHistoryState(store);
@@ -49,6 +51,11 @@ export function Toolbar({
       {drawing && (
         <div className="tool-options">
           <DrawingOptions ink={ink} onInk={onInk} tool={tool} />
+        </div>
+      )}
+      {showTextOptions && !drawing && (
+        <div className="tool-options">
+          <TextOptions style={textStyle} onChange={onTextStyle} />
         </div>
       )}
       {options === 'tape' && (
@@ -100,6 +107,7 @@ export function Toolbar({
         {toolButton('highlighter', 'Marker', <HighlighterIcon />, { background: ink.highlightColor })}
         {toolButton('eraser', 'Eraser', <EraserIcon />)}
         {toolButton('lasso', 'Lasso', <LassoIcon />)}
+        {toolButton('text', 'Text', <TextIcon />)}
         <span className="toolbar-sep" />
         {toolButton('postit', 'Post-it', <NoteIcon />, { background: colorValue(POSTIT_COLORS, postItColor) })}
         {toolButton('tape', 'Tape', <TapeIcon />, tapeBackground(tapeStyle.color, tapeStyle.pattern))}

@@ -7,8 +7,9 @@ import './ink.css';
  * optionally "type"), with the colors and sizes of the current tool.
  *   ink / onInk: from useInkTool()
  *   typing / onTyping: optional keyboard mode
+ *   textOptions: shown instead of the pen options while typing
  */
-export function DrawingToolbar({ ink, onInk, typing = false, onTyping }) {
+export function DrawingToolbar({ ink, onInk, typing = false, onTyping, textOptions = null }) {
   const showOptions = !typing && (ink.tool === 'pen' || ink.tool === 'highlighter');
 
   const pick = (tool) => {
@@ -42,6 +43,7 @@ export function DrawingToolbar({ ink, onInk, typing = false, onTyping }) {
         )}
       </div>
       {showOptions && <DrawingOptions ink={ink} onInk={onInk} tool={ink.tool} />}
+      {typing && textOptions}
     </div>
   );
 }

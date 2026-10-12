@@ -197,7 +197,8 @@
   padding: 0;
   border: none;
   background: transparent;
-  font-family: inherit;
+  color: inherit;
+  font: inherit;
   line-height: 1.4;
   outline: none;
   resize: none;
@@ -426,12 +427,8 @@
   background: #3a3a3c;
 }
 
-/* On narrower screens the zoom pill would sit under the tools: lift it. */
-@media (max-width: 1000px) {
-  .board-zoom {
-    bottom: calc(86px + var(--safe-bottom));
-  }
-}
+/* (When the tools are wide enough to reach the zoom pill, NoteBoard lifts
+   the pill above them.) */
 @media (max-width: 700px) {
   .board-zoom {
     bottom: calc(124px + var(--safe-bottom));

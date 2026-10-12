@@ -49,11 +49,20 @@ code goes online, never your books or notes.
   3 sizes, smoothing). Hold the Pencil still at the end of an oval, rectangle,
   line or arrow and it snaps into a clean shape. There's room around the
   pages, like a desk: scroll past a page's edge and write next to it.
-- **Lasso**: circle ink, tapes and post-its, then drag them somewhere else or delete.
+- **Lasso**: circle ink, text, tapes and post-its, then drag them somewhere else or delete.
+- **Text**: tap the page (or next to it) to type there. Above the toolbar:
+  font (4 regular, 4 handwritten), size, bold, italic, color. Tap a text box
+  to edit it; drag its round handle to move it, its right edge to change the
+  width, × to delete it.
+- **Zoom window** (top bar): a box on the page and a big writing area under
+  the pages. Write big there and it lands small in the box; it moves on by
+  itself near the edge, ↵ goes to the next line, − / + change the zoom. Drag
+  the box's round handle to put it somewhere else.
 - **Post-it**: tap the page to pin a note there (it stays the same small
   size at any zoom). Tap a note to open its board: dotted paper to draw on with
   the Pencil (pen, marker, eraser, 8 colors, 3 sizes), scroll and pinch-zoom
-  with your fingers, or tap Type to use the keyboard.
+  with your fingers, or tap Type to use the keyboard (same fonts and
+  options as text on the pages).
 - **Tape**: drag over what you want to hide. Tap the tool again for color and pattern.
 - **Peek**: see through all tapes while editing.
 - **Undo / Redo**: buttons, two-finger tap (undo), three-finger tap (redo), Ctrl/Cmd+Z.
@@ -74,6 +83,7 @@ src/
   viewer/              the page viewer: pan/zoom engine, touch & Pencil input,
                        page rendering, page strip, crop tool
   overlay/             what's drawn on the pages: tape, post-its
+  text/                text boxes: the bundled fonts, the options bar
   tools/               toolbar, what each tool does, the post-it and tape panels
   study/               study mode: session order, study bar, summary
   state/               the annotation store (saving, undo/redo)

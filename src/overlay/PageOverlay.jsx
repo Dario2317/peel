@@ -4,17 +4,22 @@ import { InkLayer } from '../ink/InkLayer.jsx';
 import { inkToUnits } from '../ink/pageInk.js';
 import { Tape } from './Tape.jsx';
 import { PostIt } from './PostIt.jsx';
+import { PageText } from '../text/PageText.jsx';
 import './overlay.css';
 
 /**
  * Everything drawn on top of one page. Layers, bottom to top:
- * marker → pen ink → (text boxes, milestone 4) → tape → post-its.
- * Tape is above the ink so it can hide your own handwritten answers too.
- *   overlay: { store, mode, peek, selected, study, lasso } shared by all pages
+ * marker → pen ink → text boxes → tape → post-its.
+ * Tape is above the ink and text so it can hide your own answers too.
+ *   overlay: { store, mode, peek, selected, study, lasso, text } shared by all pages
  *   lasso:   { pageId, ids: Set, box, dx, dy } the lasso selection (page units)
+ *   text:    { active: { pageId, id, editing } | null, edit } the text box
+ *            you're working on, and what its text field calls
+ *   zoomBox: { pageId, x, y, w, h } the zoom window's box (page units)
+ *   inZoom:  this is the copy inside the zoom window (no box, no editing)
  */
 export const PageOverlay = memo(function PageOverlay({ page, pageHeight, scale, overlay }) {
-  const { store, mode, peek, selected, study, lasso } = overlay;
+  const { store, mode, peek, selected, study, lasso, text, zoomBox, inZoom } = overlay;
   const items = usePageItems(store, page.id);
   const selectedId = selected?.pageId === page.id ? selected.itemId : null;
   // Handles stay the same size on screen at any zoom.
@@ -54,6 +59,23 @@ export const PageOverlay = memo(function PageOverlay({ page, pageHeight, scale, 
         />
       )}
       {items
+        .filter((item) => item.type === 'text')
+        .map((box) => {
+          const active = mode === 'edit' && !inZoom && text?.active?.pageId === page.id && text.active.id === box.id;
+          return (
+            <PageText
+              key={box.id}
+              item={box}
+              pageId={page.id}
+              pageHeight={pageHeight}
+              active={active}
+              editing={active && text.active.editing}
+              edit={text?.edit}
+              offset={offsetOf(box.id)}
+            />
+          );
+        })}
+      {items
         .filter((item) => item.type === 'tape')
         .map((tape) => (
           <Tape
@@ -80,6 +102,11 @@ export const PageOverlay = memo(function PageOverlay({ page, pageHeight, scale, 
             offset={offsetOf(note.id)}
           />
         ))}
+      {!inZoom && zoomBox?.pageId === page.id && (
+        <div className="zoom-target" style={{ left: zoomBox.x, top: zoomBox.y, width: zoomBox.w, height: zoomBox.h }}>
+          <div className="zoom-handle" data-zoom-handle title="Drag to move the box" />
+        </div>
+      )}
     </div>
   );
 });

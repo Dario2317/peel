@@ -357,3 +357,29 @@
     font-size: 15px;
   }
 }
+
+/* --- Zoom window on the pages (under the pages) ------------------------ */
+
+.page-zoom-window {
+  position: relative;
+  flex-shrink: 0;
+  height: clamp(180px, 34vh, 360px);
+  padding-bottom: var(--safe-bottom);
+  background: var(--desk);
+  border-top: 2px solid var(--accent);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12);
+}
+.page-zoom-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  cursor: crosshair;
+}
+.page-zoom-window .zoom-controls {
+  z-index: 2;
+}

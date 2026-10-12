@@ -17,6 +17,8 @@ import { useEditSession } from '../tools/useEditSession.js';
 import { newId } from '../utils/ids.js';
 import { clamp } from '../utils/platform.js';
 import { getSetting, setSetting } from '../db/settings.js';
+import { styleOf, useTextStyle } from '../text/useTextStyle.js';
+import { TextOptions } from '../text/TextOptions.jsx';
 import { BoardContent } from './BoardContent.jsx';
 import { ZoomWindow } from './ZoomWindow.jsx';
 import { LinkMenu, openLink } from './LinkMenu.jsx';
@@ -42,12 +44,14 @@ export const BOARD_BACKGROUNDS = [
  *   - Type: tap anywhere to write a text box there
  *   - Zoom window: write big at the bottom, it lands small in a box
  *   - fingers: scroll (with a fling) and pinch to zoom; two-finger tap = undo
- * The note stores: ink (strokes), texts [{ id, x, y, w, text, color, size }],
+ * The note stores: ink (strokes), texts [{ id, x, y, w, text, color, size,
+ * font, bold, italic }],
  * bg ('white' | 'black' | 'note') and view (where you were).
  */
 export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClose, onColorUsed }) {
   const item = useItem(store, pageId, itemId);
   const [ink, setInk] = useInkTool();
+  const [textStyle, setTextStyle] = useTextStyle(); // for new text boxes (shared with the pages)
   const [typing, setTyping] = useState(Boolean(startTyping) && editable); // the Type tool
   const [editingId, setEditingId] = useState(null); // the text box being edited
   const [menu, setMenu] = useState(null); // 'look' | 'zoom' | null
@@ -126,19 +130,27 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
 
   const createText = (x, y) => {
     const id = newId('txt');
+    const style = latest.current.textStyle;
     const visibleRight = engine.current ? engine.current.visibleRight() : x + 400;
     const box = {
       id,
       x,
-      y: y - TEXT_SIZE * 0.8, // the first line sits where you tapped
+      y: y - style.size * 0.8, // the first line sits where you tapped
       w: clamp(visibleRight - x - 16, 120, 520),
       text: '',
-      color: ink.penColor,
-      size: TEXT_SIZE,
+      ...style,
     };
     editStart.current.set(id, null);
     setNote({ texts: [...(note()?.texts ?? []), box] }, { history: false });
     beginEdit(id);
+  };
+
+  // Font, size, color, bold, italic: for the text being typed, and for new text.
+  // (Part of that text's edit, so it's in the same undo step.)
+  const editingBox = editingId ? item?.texts?.find((t) => t.id === editingId) : null;
+  const changeTextStyle = (fields) => {
+    setTextStyle(fields);
+    if (editingBox) setNote({ texts: note().texts.map((t) => (t.id === editingBox.id ? { ...t, ...fields } : t)) }, { history: false });
   };
 
   const textEditing = {
@@ -219,7 +231,7 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
 
   const latest = useRef();
   latest.current = {
-    ink, typing, editable, dark, editingId, selectionBox, zoomWin,
+    ink, typing, editable, dark, editingId, selectionBox, zoomWin, textStyle,
     beginEdit, createText, findBox, recordTextChange, setNote, setSelection, setMoving, moveSelection, setZoomWin,
     isEditing: (id) => editStart.current.has(id),
   };
@@ -559,6 +571,30 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
     };
   }, []);
 
+  // The zoom pill sits bottom-left; when the tools at the bottom are wide
+  // enough to reach it (small screens, text options), it moves above them.
+  const toolsRef = useRef(null);
+  const pillRef = useRef(null);
+  useLayoutEffect(() => {
+    const tools = toolsRef.current;
+    const pill = pillRef.current;
+    if (!tools || !pill) return;
+    const place = () => {
+      pill.style.bottom = '';
+      const t = tools.getBoundingClientRect();
+      const p = pill.getBoundingClientRect();
+      if (t.left < p.right + 8) pill.style.bottom = `${window.innerHeight - t.top + 10}px`;
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(tools);
+    window.addEventListener('resize', place);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', place);
+    };
+  }, [Boolean(zoomWin), editable]);
+
   // Keep the zoom window's box in view on the board.
   useEffect(() => {
     if (zoomWin) engine.current?.ensureVisible(zoomWin, window.innerHeight * 0.36 + 70);
@@ -723,7 +759,7 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       )}
 
       {!zoomWin && (
-        <div className="board-zoom">
+        <div className="board-zoom" ref={pillRef}>
           {menu === 'zoom' && (
             <div className="board-menu zoom">
               <button onClick={() => { engine.current.zoomTo(1); setMenu(null); }}>100%</button>
@@ -738,8 +774,14 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       )}
 
       {editable && (
-        <div className="board-tools">
-          <DrawingToolbar ink={ink} onInk={setInk} typing={typing} onTyping={setTyping} />
+        <div className="board-tools" ref={toolsRef}>
+          <DrawingToolbar
+            ink={ink}
+            onInk={setInk}
+            typing={typing}
+            onTyping={setTyping}
+            textOptions={<TextOptions style={editingBox ? styleOf(editingBox) : textStyle} onChange={changeTextStyle} />}
+          />
         </div>
       )}
 

@@ -75,6 +75,11 @@ export const PasteIcon = (p) => (
     <path d="M9 10h6M9 14h6" />
   </Icon>
 );
+export const TextIcon = (p) => (
+  <Icon {...p}>
+    <path d="M5 6V4h14v2M12 4v16M9 20h6" />
+  </Icon>
+);
 export const FolderIcon = (p) => (
   <Icon {...p}>
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />

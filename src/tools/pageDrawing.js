@@ -12,7 +12,7 @@ const ERASER_RADIUS_PX = 12;
 
 /**
  * ctx: { store, viewport, wet, getState() -> { tool, ink, lasso }, showCursor,
- *        setLasso(lasso | null) }
+ *        setLasso(lasso | null), onStroke(stroke in page units) (optional) }
  * Returns a pointer handler, or 'navigate'.
  */
 export function pageDrawingHandler(e, ctx) {
@@ -50,7 +50,10 @@ export function pageDrawingHandler(e, ctx) {
         if (shape?.kind === 'chevron' && !arrowFromChevron(shape, pageInk().map((i) => inkToUnits(i, rect.h)))) return null;
         return shape;
       },
-      onDone: (stroke) => addStroke(store, pageId, rect.h, stroke),
+      onDone: (stroke) => {
+        addStroke(store, pageId, rect.h, stroke);
+        ctx.onStroke?.(stroke);
+      },
     });
   }
 
@@ -101,7 +104,8 @@ function addStroke(store, pageId, pageHeight, stroke) {
 }
 
 // The eraser removes whole strokes it touches, on this page and its
-// neighbors (ink can run past a page's edge). One undo step per erase.
+// neighbors (ink can run past a page's edge), and text boxes it touches.
+// One undo step per erase.
 function erasePages(e, ctx) {
   const { store, viewport } = ctx;
   const removed = []; // { pageId, item }
@@ -124,6 +128,12 @@ function erasePages(e, ctx) {
         store.change(pageId, item, null, { history: false });
       }
     }
+    const textEl = document.elementFromPoint(clientX, clientY)?.closest?.('.page-text[data-item-id]');
+    const text = textEl && store.getItem(textEl.dataset.pageId, textEl.dataset.itemId);
+    if (text) {
+      removed.push({ pageId: textEl.dataset.pageId, item: text });
+      store.change(textEl.dataset.pageId, text, null, { history: false });
+    }
   };
 
   eraseAt(e.clientX, e.clientY);
@@ -143,8 +153,8 @@ function erasePages(e, ctx) {
   };
 }
 
-// What the lasso loop catches on a page: ink mostly inside, tapes and
-// post-its whose middle is inside. Returns the selection or null.
+// What the lasso loop catches on a page: ink mostly inside, tapes, text
+// boxes and post-its whose middle is inside. Returns the selection or null.
 function selectOnPage(store, pageId, pageHeight, polygon, scale) {
   const items = store.getItems(pageId);
   const strokes = items.filter((i) => i.type === 'ink').map((i) => inkToUnits(i, pageHeight));
@@ -163,11 +173,11 @@ function selectOnPage(store, pageId, pageHeight, polygon, scale) {
     grow(b.left - s.size, b.top - s.size, b.right + s.size, b.bottom + s.size);
   }
   for (const item of items) {
-    if (item.type === 'tape') {
+    if (item.type === 'tape' || item.type === 'text') {
       const l = item.x * 1000;
       const t = item.y * pageHeight;
       const r = l + item.w * 1000;
-      const b = t + item.h * pageHeight;
+      const b = t + (item.type === 'tape' ? item.h * pageHeight : textBoxHeight(item));
       if (pointInPolygon((l + r) / 2, (t + b) / 2, polygon)) {
         ids.add(item.id);
         grow(l, t, r, b);
@@ -183,6 +193,12 @@ function selectOnPage(store, pageId, pageHeight, polygon, scale) {
     }
   }
   return ids.size ? { pageId, ids, box, dx: 0, dy: 0 } : null;
+}
+
+// A text box's height in page units, as it is on screen (wrapped lines).
+function textBoxHeight(item) {
+  const el = document.querySelector(`.page-text[data-text-id="${item.id}"]`);
+  return el ? el.offsetHeight : item.size * 1.3 * item.text.split('\n').length;
 }
 
 // Move the selected things by (dx, dy) page units. One undo step.

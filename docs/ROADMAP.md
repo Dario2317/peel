@@ -25,11 +25,13 @@ What's done, what's next, and requests to remember.
   Freeform; one-finger scrolling sticks to up/down so it doesn't drift);
   folders in the library (nested, Move to…, drag onto a folder, delete keeps
   or removes what's inside).
+- **Milestone 4** — text boxes on the pages (anywhere, also next to the page)
+  and on the post-it boards: 8 bundled fonts (4 handwritten), size, bold,
+  italic, 8 colors; zoom window on the pages; smoothing that really smooths
+  (it used to make lines more jagged).
 
 ## Next
 
-- **Milestone 4** — text boxes anywhere on the page, ~8 bundled fonts
-  (some handwritten), size/color/bold/italic, same options inside post-its.
 - **Milestone 5** — backup & export:
   - export one notebook as a file and import it back
   - **"Back up everything" / "Restore"** to move all notebooks between the
@@ -40,8 +42,6 @@ What's done, what's next, and requests to remember.
 
 ## Requests to fit in
 
-- **Zoom window on the pages** (already on the post-it boards): a box on the
-  page and a big writing area at the bottom, for precise small handwriting.
 - **iPadOS three-finger undo bar**: not possible for a web app (the system
   only connects it to text fields). Peel uses two-finger tap = undo,
   three-finger tap = redo, plus on-screen buttons.

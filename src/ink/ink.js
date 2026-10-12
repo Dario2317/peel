@@ -17,16 +17,54 @@ export function hasRealPressure(flatPoints) {
   return max - min > 0.05;
 }
 
+// "Smooth" (0 = raw, 1 = very smooth) evens out the wobble of your hand by
+// smoothing the drawn points themselves (see smoothPoints). perfect-freehand's
+// own `smoothing` stays low: a high value makes it skip outline points, which
+// turns curves into straight pieces (jagged lines).
+const SMOOTH_WIDTH = 3.5; // units, at full smoothing
+
 function strokeOptions(stroke, finished) {
-  const smooth = stroke.smooth ?? 0.5; // 0 = raw, 1 = very smooth
+  const smooth = stroke.smooth ?? 0.5;
   return {
     size: stroke.size,
     thinning: stroke.pressure ? 0.55 : 0, // no pressure → even width, like a fineliner
-    smoothing: 0.3 + 0.6 * smooth, // softer outline
-    streamline: 0.05 + 0.55 * smooth, // steadier line, but keep up with fast strokes
+    smoothing: 0.25, // keep the outline detailed
+    streamline: 0.05 + 0.3 * smooth, // steadier line, but keep up with fast strokes
     simulatePressure: false,
     last: finished,
   };
+}
+
+/**
+ * Smooths a line without making it lag: every point becomes a weighted
+ * average of its neighbors along the line (a Gaussian, `sigma` units wide).
+ * Near the ends the window gets narrower, so the line starts and ends
+ * exactly where you drew it.
+ *   points: [[x, y, pressure], …]
+ */
+export function smoothPoints(points, sigma) {
+  if (sigma < 0.05 || points.length < 3) return points;
+  const dist = [0]; // distance along the line to each point
+  for (let i = 1; i < points.length; i++) {
+    dist.push(dist[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
+  }
+  const total = dist[dist.length - 1];
+  return points.map((p, i) => {
+    const s = Math.min(sigma, dist[i] / 2, (total - dist[i]) / 2);
+    if (s < 0.05) return p;
+    let weights = 0;
+    let x = 0;
+    let y = 0;
+    const add = (j) => {
+      const w = Math.exp(-((dist[j] - dist[i]) ** 2) / (2 * s * s));
+      weights += w;
+      x += w * points[j][0];
+      y += w * points[j][1];
+    };
+    for (let j = i; j >= 0 && dist[i] - dist[j] <= 3 * s; j--) add(j);
+    for (let j = i + 1; j < points.length && dist[j] - dist[i] <= 3 * s; j++) add(j);
+    return [x / weights, y / weights, p[2]];
+  });
 }
 
 function toPoints(flat) {
@@ -52,7 +90,9 @@ function computePath(stroke, finished) {
     const r = stroke.size / 2;
     return `M${x - r},${y}a${r},${r} 0 1,0 ${r * 2},0a${r},${r} 0 1,0 ${-r * 2},0`;
   }
-  return outlineToPath(getStroke(points, strokeOptions(stroke, finished)));
+  // Hand wobble is about the same whatever the pen size.
+  const sigma = (stroke.smooth ?? 0.5) * SMOOTH_WIDTH;
+  return outlineToPath(getStroke(smoothPoints(points, sigma), strokeOptions(stroke, finished)));
 }
 
 function isDot(points) {

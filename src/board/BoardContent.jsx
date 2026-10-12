@@ -1,5 +1,6 @@
 import { InkLayer } from '../ink/InkLayer.jsx';
 import { displayColor } from '../ink/inkStyle.js';
+import { textCss } from '../text/fonts.js';
 
 /**
  * What's on a post-it board: the ink and the text boxes, in board units.
@@ -18,11 +19,11 @@ export function BoardContent({ note, dark, moving = null, editing = null }) {
         const offset = moving?.textIds.has(box.id) ? moving : null;
         const left = box.x + (offset?.dx ?? 0);
         const top = box.y + (offset?.dy ?? 0);
-        const color = displayColor(box.color, dark);
+        const look = textCss(box, displayColor(box.color, dark));
 
         if (editing && editing.id === box.id) {
           return (
-            <div key={box.id} className="board-textbox editing" style={{ left, top, width: box.w }}>
+            <div key={box.id} className="board-textbox editing" style={{ left, top, width: box.w, ...look }}>
               {/* Drag to move; × to delete. They keep the keyboard open. */}
               <div className="text-handle" data-text-handle={box.id} title="Drag to move" onMouseDown={(e) => e.preventDefault()} />
               <button
@@ -40,7 +41,6 @@ export function BoardContent({ note, dark, moving = null, editing = null }) {
                 ref={editing.setRef(box.id)}
                 defaultValue={box.text}
                 rows={1}
-                style={{ color, fontSize: box.size }}
                 onInput={(e) => editing.onInput(box.id, e.target.value)}
                 onBlur={() => editing.onBlur(box.id)}
               />
@@ -52,7 +52,7 @@ export function BoardContent({ note, dark, moving = null, editing = null }) {
             key={box.id}
             className="board-textbox"
             data-text-id={box.id}
-            style={{ left, top, width: box.w, color, fontSize: box.size }}
+            style={{ left, top, width: box.w, ...look }}
           >
             {box.text}
           </div>

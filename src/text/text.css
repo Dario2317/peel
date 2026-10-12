@@ -1,0 +1,205 @@
+/* --- Text options bar (font, size, bold, italic, color) --------------- */
+
+.text-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.font-picker {
+  position: relative;
+}
+.font-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 128px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 17px;
+  cursor: pointer;
+}
+.font-button.on {
+  border-color: var(--accent);
+}
+.font-button .caret {
+  margin-left: auto;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+}
+.font-list {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(40, 25, 10, 0.22), 0 0 0 1px var(--line);
+  animation: pop-in 0.12s ease-out;
+}
+.font-list button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--ink);
+  font-size: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+.font-list button:hover,
+.font-list button.on {
+  background: var(--accent-soft);
+}
+.text-step,
+.text-toggle {
+  width: 38px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font: 600 17px system-ui, sans-serif;
+  cursor: pointer;
+}
+.text-step small {
+  font-size: 13px;
+}
+.text-toggle {
+  font-family: Georgia, serif;
+  font-size: 19px;
+}
+.text-toggle.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.text-size {
+  min-width: 26px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--muted);
+}
+.text-colors {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Dark board background: dark options too */
+.bg-black .font-button,
+.bg-black .font-list {
+  background: #2a2a2c;
+  color: #f2f2f2;
+  border-color: #3a3a3c;
+}
+.bg-black .font-list button,
+.bg-black .text-step,
+.bg-black .text-toggle {
+  color: #f2f2f2;
+}
+.bg-black .font-list button.on,
+.bg-black .text-toggle.on {
+  background: rgba(217, 90, 67, 0.25);
+  color: #ff8a73;
+}
+
+/* --- Text boxes on the pages (sizes in page units) ---------------------- */
+
+.page-text {
+  position: absolute;
+  min-height: 1.3em;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+.page-text.active {
+  outline: calc(1.5px / var(--zoom, 1)) dashed var(--accent);
+  outline-offset: calc(4px / var(--zoom, 1));
+  border-radius: calc(2px / var(--zoom, 1));
+}
+.page-text textarea {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  overflow-wrap: anywhere;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Handles around the active text box; same size on screen at any zoom. */
+.text-grip,
+.text-width,
+.text-x {
+  position: absolute;
+  touch-action: none;
+}
+.text-grip {
+  top: 50%;
+  left: calc(-34px / var(--zoom, 1));
+  width: calc(24px / var(--zoom, 1));
+  height: calc(24px / var(--zoom, 1));
+  margin-top: calc(-12px / var(--zoom, 1));
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: move;
+}
+.text-grip::after {
+  content: '';
+  position: absolute;
+  inset: 28%;
+  border-top: calc(2px / var(--zoom, 1)) solid #fff;
+  border-bottom: calc(2px / var(--zoom, 1)) solid #fff;
+}
+.text-width {
+  top: 50%;
+  right: calc(-14px / var(--zoom, 1));
+  width: calc(10px / var(--zoom, 1));
+  height: calc(30px / var(--zoom, 1));
+  margin-top: calc(-15px / var(--zoom, 1));
+  border-radius: calc(5px / var(--zoom, 1));
+  background: var(--surface);
+  box-shadow: 0 0 0 calc(1.5px / var(--zoom, 1)) var(--accent), 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: ew-resize;
+}
+.text-x {
+  top: calc(-30px / var(--zoom, 1));
+  right: calc(-30px / var(--zoom, 1));
+  width: calc(26px / var(--zoom, 1));
+  height: calc(26px / var(--zoom, 1));
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #6b645c;
+  color: #fff;
+  font-family: system-ui, sans-serif;
+  font-size: calc(17px / var(--zoom, 1));
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
