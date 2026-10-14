@@ -2,7 +2,7 @@
 // covers the screen. It is redrawn on every Pencil event without waiting
 // for React, so the line keeps up with the tip. When you lift the Pencil
 // the stroke is saved and drawn as SVG instead, and this canvas is cleared.
-import { strokePath } from './ink.js';
+import { isLineStroke, liveLinePoints, strokePath } from './ink.js';
 import { shapePath } from './shapes.js';
 import { displayColor, HIGHLIGHT_OPACITY } from './inkStyle.js';
 
@@ -56,8 +56,23 @@ export class WetInk {
       ctx.stroke(new Path2D(shapePath(stroke.shape, stroke.size)));
       return;
     }
+    const live = { ...stroke, points: [...stroke.points, ...extra] };
+    if (isLineStroke(live)) {
+      // Same width all along: a line with a round tip through the smoothed points.
+      const points = liveLinePoints(live);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = stroke.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(points[0][0], points[0][1]);
+      if (points.length === 1) ctx.lineTo(points[0][0] + 0.01, points[0][1]);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+      ctx.stroke();
+      return;
+    }
     ctx.fillStyle = color;
-    ctx.fill(new Path2D(strokePath({ ...stroke, points: [...stroke.points, ...extra] }, false)));
+    ctx.fill(new Path2D(strokePath(live, false)));
   }
 
   // The lasso loop while you draw it (dashed line, constant width on screen).

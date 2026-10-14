@@ -1,7 +1,7 @@
 // Pointer handlers for drawing, erasing and the lasso, used by the post-it
 // boards now and by the pages in milestone 3. They plug into input.js
 // through routePointer: each returns { move(e), up(e), cancel() }.
-import { eventPoints, hasRealPressure, predictedPoints, round1, strokeHit } from './ink.js';
+import { eventPoints, hasRealPressure, predictedPoints, round1, smoothWidthFor, strokeHit } from './ink.js';
 import { recognizeShape, shapePoints } from './shapes.js';
 import { newId } from '../utils/ids.js';
 
@@ -25,6 +25,8 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
   const stroke = {
     id: newId('ink'),
     ...style,
+    // The smoothing follows what you see: the same on screen at any zoom.
+    sw: round1(smoothWidthFor(style.smooth, getCamera().scale) * 100) / 100,
     pressure: false,
     points: [round1(x), round1(y), e.pressure || 0.5],
   };

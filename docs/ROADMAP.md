@@ -42,6 +42,9 @@ What's done, what's next, and requests to remember.
 
 ## Requests to fit in
 
+- **Text boxes with a background** (asked after Milestone 4, do next): a
+  text box can have a solid fill, e.g. a white rectangle that covers part of
+  the book (labels on an illustration) and you type on it.
 - **iPadOS three-finger undo bar**: not possible for a web app (the system
   only connects it to text fields). Peel uses two-finger tap = undo,
   three-finger tap = redo, plus on-screen buttons.

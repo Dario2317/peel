@@ -39,6 +39,7 @@ export function inkToUnits(item, pageHeight) {
   const stroke = {
     ...item,
     size: item.size * 1000,
+    ...(item.sw != null ? { sw: item.sw * 1000 } : {}),
     points: convertPoints(item.points, 1000, pageHeight),
     shape: convertShape(item.shape, 1000, pageHeight),
   };
@@ -58,6 +59,7 @@ export function unitsToInk(stroke, pageHeight) {
     smooth,
     pressure,
     size: stroke.size / 1000,
+    ...(stroke.sw != null ? { sw: stroke.sw / 1000 } : {}),
     points: convertPoints(stroke.points, 1 / 1000, 1 / pageHeight).map(round),
     ...(stroke.shape ? { shape: convertShape(stroke.shape, 1 / 1000, 1 / pageHeight) } : {}),
   };

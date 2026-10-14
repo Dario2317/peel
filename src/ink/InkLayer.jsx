@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { strokePath } from './ink.js';
+import { isLineStroke, strokePath } from './ink.js';
 import { shapePath } from './shapes.js';
 import { displayColor, HIGHLIGHT_OPACITY } from './inkStyle.js';
 
@@ -35,14 +35,15 @@ export const InkLayer = memo(function InkLayer({ strokes, dark = false, moving =
   );
 });
 
-// Freehand strokes are filled outlines; shapes are drawn as clean lines.
+// Shapes and strokes without pressure are lines with a round tip; strokes
+// with pressure are filled outlines (thinner and thicker).
 function renderStroke(s, dark) {
   const color = s.tool === 'highlighter' ? s.color : displayColor(s.color, dark);
-  if (s.shape) {
+  if (s.shape || isLineStroke(s)) {
     return (
       <path
         key={s.id}
-        d={shapePath(s.shape, s.size)}
+        d={s.shape ? shapePath(s.shape, s.size) : strokePath(s)}
         fill="none"
         stroke={color}
         strokeWidth={s.size}

@@ -20,6 +20,7 @@ export function remapItemsForCrop(items, oldCrop, newCrop) {
     if ('w' in item) out.w = item.w * scaleW;
     if ('h' in item) out.h = item.h * scaleH;
     if ('size' in item) out.size = item.size * scaleW;
+    if ('sw' in item) out.sw = item.sw * scaleW; // ink smoothing width
     if ('openW' in item) out.openW = item.openW * scaleW;
     if ('openH' in item) out.openH = item.openH * scaleH;
     if (item.style && 'fontSize' in item.style) {
