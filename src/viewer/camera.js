@@ -21,7 +21,7 @@ export function fitWidthScale(viewWidth) {
 
 export function scaleLimits(viewWidth) {
   const fit = fitWidthScale(viewWidth);
-  return { min: fit * 0.3, max: fit * 8 };
+  return { min: fit * 0.3, max: fit * 20 };
 }
 
 // Zoom to newScale while the world point under (sx, sy) stays in place.

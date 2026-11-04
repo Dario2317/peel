@@ -29,7 +29,7 @@ const GRID = 24; // distance between the dots, in board units
 const ERASER_RADIUS_PX = 12;
 const TEXT_SIZE = 20;
 const MIN_SCALE = 0.25;
-const MAX_SCALE = 6;
+const MAX_SCALE = 16;
 export const BOARD_BACKGROUNDS = [
   { id: 'white', label: 'White' },
   { id: 'black', label: 'Black' },

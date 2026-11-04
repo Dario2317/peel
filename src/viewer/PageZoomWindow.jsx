@@ -12,7 +12,7 @@ import '../board/board.css';
 
 // How much bigger the page looks in the window (screen px per page unit).
 const MIN_ZOOM = 1.25;
-const MAX_ZOOM = 8;
+const MAX_ZOOM = 16;
 const SETTLE_MS = 200;
 const DRAWING_TOOLS = new Set(['pen', 'highlighter', 'eraser', 'lasso']);
 

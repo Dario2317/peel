@@ -10,7 +10,7 @@ import { CloseIcon } from '../ui/icons.jsx';
 const GRID = 24;
 // How much bigger things look in the window (screen px per board unit).
 const MIN_ZOOM = 1.25;
-const MAX_ZOOM = 8;
+const MAX_ZOOM = 16;
 
 /**
  * The zoom window (like GoodNotes): the bottom of the screen shows the box
