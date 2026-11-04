@@ -53,6 +53,10 @@
   align-items: center;
   gap: 2px;
 }
+.draw-options {
+  flex-wrap: wrap;
+  justify-content: center;
+}
 .color-dot {
   width: 32px;
   height: 32px;
@@ -95,4 +99,67 @@
 .smooth-control input {
   width: 90px;
   accent-color: var(--accent);
+}
+
+/* --- Color dictionary ----------------------------------------------------- */
+
+.color-meaning {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.legend-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.legend-btn.on {
+  background: var(--desk);
+}
+.legend-editor {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 4px 12px;
+  padding: 6px 4px 2px;
+}
+.legend-title {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-swatch {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.legend-row input {
+  min-width: 0;
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  font-size: 16px; /* 16px: iPad Safari doesn't zoom the page on focus */
+  color: inherit;
 }

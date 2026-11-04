@@ -12,11 +12,25 @@ export const PEN_COLORS = [
 ];
 
 // Highlighter colors are drawn see-through on top of the page.
-export const HIGHLIGHT_COLORS = ['#ffe14d', '#8de08a', '#ff9ec4', '#8cc8ff', '#ffb26b'];
+export const HIGHLIGHT_COLORS = [
+  '#ffe14d', // yellow
+  '#8de08a', // green
+  '#ff9ec4', // pink
+  '#8cc8ff', // blue
+  '#ffb26b', // orange
+  '#c9a6f0', // purple
+  '#ff7b72', // red
+  '#7fe3d6', // teal
+  '#d4f26a', // lime
+  '#c4bdb3', // gray
+];
 
 // Stroke widths (in board/page units; they get bigger when you zoom in, like real ink).
-export const PEN_SIZES = [1.6, 2.8, 5];
-export const HIGHLIGHT_SIZES = [10, 18, 28];
+// The smallest ones are for writing zoomed out or squeezing text in small spaces.
+export const PEN_SIZES = [0.6, 1, 1.6, 2.8, 5];
+export const HIGHLIGHT_SIZES = [6, 10, 18, 28];
+export const DEFAULT_PEN_SIZE = 2.8;
+export const DEFAULT_HIGHLIGHT_SIZE = 18;
 
 export const HIGHLIGHT_OPACITY = 0.38;
 

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useColorLegend } from './colorLegend.js';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_SIZES, PEN_COLORS, PEN_SIZES } from './inkStyle.js';
 import { EraserIcon, HighlighterIcon, KeyboardIcon, LassoIcon, PenIcon } from '../ui/icons.jsx';
 import './ink.css';
@@ -58,6 +60,8 @@ export function DrawingOptions({ ink, onInk, tool }) {
   const sizes = highlighter ? HIGHLIGHT_SIZES : PEN_SIZES;
   const color = highlighter ? ink.highlightColor : ink.penColor;
   const size = highlighter ? ink.highlightSize : ink.penSize;
+  const [legend, setMeaning] = useColorLegend();
+  const [editing, setEditing] = useState(false);
 
   return (
     <div className="draw-options">
@@ -66,19 +70,24 @@ export function DrawingOptions({ ink, onInk, tool }) {
           key={c}
           className={`color-dot ${c === color ? 'on' : ''}`}
           style={{ '--c': c }}
-          aria-label={`Color ${c}`}
+          title={legend[c] || undefined}
+          aria-label={legend[c] ? `${legend[c]} (${c})` : `Color ${c}`}
           onClick={() => onInk(highlighter ? { highlightColor: c } : { penColor: c })}
         />
       ))}
+      {legend[color] && <span className="color-meaning">{legend[color]}</span>}
+      <button className={`legend-btn ${editing ? 'on' : ''}`} onClick={() => setEditing(!editing)} aria-pressed={editing} title="What each color means">
+        Legend
+      </button>
       <span className="toolbar-sep" />
       {sizes.map((s, i) => (
         <button
           key={s}
           className={`size-dot ${s === size ? 'on' : ''}`}
-          aria-label={['Thin', 'Medium', 'Thick'][i]}
+          aria-label={`Size ${s}`}
           onClick={() => onInk(highlighter ? { highlightSize: s } : { penSize: s })}
         >
-          <span style={{ width: 5 + i * 5, height: 5 + i * 5, background: color }} />
+          <span style={{ width: 4 + i * 4, height: 4 + i * 4, background: color }} />
         </button>
       ))}
       <span className="toolbar-sep" />
@@ -94,6 +103,32 @@ export function DrawingOptions({ ink, onInk, tool }) {
           onChange={(e) => onInk({ smoothing: Number(e.target.value) })}
         />
       </label>
+      {editing && <LegendEditor legend={legend} setMeaning={setMeaning} />}
+    </div>
+  );
+}
+
+// One line per color (pens, then markers): type what it means to you.
+function LegendEditor({ legend, setMeaning }) {
+  const row = (c) => (
+    <label key={c} className="legend-row">
+      <span className="legend-swatch" style={{ '--c': c }} />
+      <input
+        type="text"
+        defaultValue={legend[c] ?? ''}
+        maxLength={60}
+        placeholder="Meaning…"
+        onBlur={(e) => setMeaning(c, e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      />
+    </label>
+  );
+  return (
+    <div className="legend-editor">
+      <div className="legend-title">Pen colors</div>
+      {PEN_COLORS.map(row)}
+      <div className="legend-title">Marker colors</div>
+      {HIGHLIGHT_COLORS.map(row)}
     </div>
   );
 }

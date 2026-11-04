@@ -3,14 +3,14 @@
 //     highlightColor, highlightSize, smoothing }
 import { useEffect, useState } from 'react';
 import { getSetting, setSetting } from '../db/settings.js';
-import { DEFAULT_SMOOTHING, HIGHLIGHT_COLORS, HIGHLIGHT_SIZES, PEN_COLORS, PEN_SIZES } from './inkStyle.js';
+import { DEFAULT_HIGHLIGHT_SIZE, DEFAULT_PEN_SIZE, DEFAULT_SMOOTHING, HIGHLIGHT_COLORS, PEN_COLORS } from './inkStyle.js';
 
 const DEFAULT = {
   tool: 'pen',
   penColor: PEN_COLORS[0],
-  penSize: PEN_SIZES[1],
+  penSize: DEFAULT_PEN_SIZE,
   highlightColor: HIGHLIGHT_COLORS[0],
-  highlightSize: HIGHLIGHT_SIZES[1],
+  highlightSize: DEFAULT_HIGHLIGHT_SIZE,
   smoothing: DEFAULT_SMOOTHING,
 };
 
