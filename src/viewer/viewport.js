@@ -8,7 +8,7 @@ import { centeredX, clampCamera, fitWidthScale, scaleLimits, zoomAround } from '
 import { pageIndexAt, pagesInRange, PAGE_GAP } from './layout.js';
 import { clamp } from '../utils/platform.js';
 
-const SETTLE_MS = 150;
+const SETTLE_MS = 100;
 
 export class Viewport {
   constructor(container, world, callbacks) {

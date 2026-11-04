@@ -12,7 +12,8 @@ import { PAGE_WIDTH, pageAspect } from './layout.js';
 // Canvases are created and swapped by hand (not by React) so the old one
 // stays on screen until the new one is ready, then gets freed right away.
 const MAX_BASE_PIXELS = 3_000_000;
-const MAX_DETAIL_PIXELS = 6_000_000;
+const MAX_DETAIL_PIXELS = 8_000_000;
+const DETAIL_MARGINS = [0.15, 0.08, 0]; // extra area around the screen, biggest that fits
 const STEP = 1.5; // base sharpness changes in steps, so tiny zooms don't re-render
 
 function stepUp(width) {
@@ -128,15 +129,26 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
     const d = detail.current;
     if (d.canvas && d.scale === view.scale && contains(d.region, onScreen)) return; // still covers it
 
-    // Render a bit more than what's visible, so small pans stay sharp.
-    const marginX = onScreen.w * 0.15;
-    const marginY = onScreen.h * 0.15;
-    const region = intersect(
-      { x: onScreen.x - marginX, y: onScreen.y - marginY, w: onScreen.w + 2 * marginX, h: onScreen.h + 2 * marginY },
-      FULL_CROP,
-    );
-    let pixelWidth = region.w * fullWidth;
-    let pixelHeight = region.h * fullWidth * aspect;
+    // Render a bit more than what's visible, so small pans stay sharp. If that
+    // would be more pixels than a canvas may have, shrink the margin first:
+    // what you see should stay at full sharpness, the margin is a bonus.
+    let region = null;
+    let pixelWidth = 0;
+    let pixelHeight = 0;
+    for (const margin of DETAIL_MARGINS) {
+      region = intersect(
+        {
+          x: onScreen.x - onScreen.w * margin,
+          y: onScreen.y - onScreen.h * margin,
+          w: onScreen.w * (1 + 2 * margin),
+          h: onScreen.h * (1 + 2 * margin),
+        },
+        FULL_CROP,
+      );
+      pixelWidth = region.w * fullWidth;
+      pixelHeight = region.h * fullWidth * aspect;
+      if (pixelWidth * pixelHeight <= MAX_DETAIL_PIXELS) break;
+    }
     const area = pixelWidth * pixelHeight;
     if (area > MAX_DETAIL_PIXELS) {
       const k = Math.sqrt(MAX_DETAIL_PIXELS / area);
