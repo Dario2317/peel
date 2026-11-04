@@ -88,7 +88,27 @@ export function smoothPoints(points, sigma) {
     for (let j = i; j >= 0 && dist[i] - dist[j] <= 3 * s; j--) add(j);
     for (let j = i + 1; j < points.length && dist[j] - dist[i] <= 3 * s; j++) add(j);
     return [x / weights, y / weights, p[2]];
-  });
+  }).map(smoothPressureAt(points, dist, sigma));
+}
+
+// The Pencil's pressure is noisy, and the outline of a pressure stroke gets
+// thicker and thinner with it: raw values make bumpy edges. So pressure is
+// averaged over a longer stretch of the line than the position is.
+const PRESSURE_SIGMA = 3; // times the smoothing width
+function smoothPressureAt(points, dist, sigma) {
+  const ps = sigma * PRESSURE_SIGMA;
+  return (smoothed, i) => {
+    let weights = 0;
+    let pressure = 0;
+    const add = (j) => {
+      const w = Math.exp(-((dist[j] - dist[i]) ** 2) / (2 * ps * ps));
+      weights += w;
+      pressure += w * points[j][2];
+    };
+    for (let j = i; j >= 0 && dist[i] - dist[j] <= 3 * ps; j--) add(j);
+    for (let j = i + 1; j < points.length && dist[j] - dist[i] <= 3 * ps; j++) add(j);
+    return [smoothed[0], smoothed[1], pressure / weights];
+  };
 }
 
 function toPoints(flat) {
