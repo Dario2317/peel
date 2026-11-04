@@ -14,6 +14,11 @@ import { PAGE_WIDTH, pageAspect } from './layout.js';
 const MAX_BASE_PIXELS = 3_000_000;
 const MAX_DETAIL_PIXELS = 8_000_000;
 const DETAIL_MARGINS = [0.2, 0.12, 0.06, 0]; // extra area around the screen, biggest that fits
+// While you pinch, the page is redrawn a few times a second: smaller pictures,
+// so each one is ready fast and the pinch stays smooth. The full one comes
+// when you let go.
+const ZOOMING_MARGINS = [0.06, 0];
+const MAX_ZOOMING_PIXELS = 4_000_000;
 // While you move the page, a new detail render starts when the screen gets this
 // close (as a fraction of the screen) to the edge of the sharp area, so the
 // blurry base is never reached.
@@ -150,15 +155,24 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
       },
       FULL_CROP,
     );
+    const sameScale = (a) => Math.abs(a / view.scale - 1) < 0.01;
+    // While you pinch a quick, smaller picture will do; once you stop, only a
+    // full one does.
+    const goodEnough = (r) => sameScale(r.scale) && (r.full || view.live);
     const d = detail.current;
-    if (d.canvas && d.scale === view.scale && contains(d.region, wanted)) {
+    if (d.canvas && goodEnough(d) && contains(d.region, wanted)) {
       cancelPending(); // still covered: a render in progress is no longer needed
       return;
     }
-    // A render in progress that covers the screen keeps going (restarting it
-    // on every move would mean it never finishes while you keep moving).
     const p = pending.current;
-    if (p && p.scale === view.scale && contains(p.region, onScreen)) return;
+    if (p) {
+      // While you move or pinch, a render in progress always finishes (if each
+      // new position restarted it, it would never finish while you keep
+      // moving); the next one starts from wherever you are then.
+      if (view.live) return;
+      // You stopped: keep it only if it is right for where you stopped.
+      if (goodEnough(p) && contains(p.region, onScreen)) return;
+    }
     cancelPending();
 
     // Render a bit more than what's visible, so small pans stay sharp. If that
@@ -167,7 +181,8 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
     let region = null;
     let pixelWidth = 0;
     let pixelHeight = 0;
-    for (const margin of DETAIL_MARGINS) {
+    const budget = view.zooming ? MAX_ZOOMING_PIXELS : MAX_DETAIL_PIXELS;
+    for (const margin of view.zooming ? ZOOMING_MARGINS : DETAIL_MARGINS) {
       region = intersect(
         {
           x: onScreen.x - onScreen.w * margin,
@@ -179,17 +194,18 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
       );
       pixelWidth = region.w * fullWidth;
       pixelHeight = region.h * fullWidth * aspect;
-      if (pixelWidth * pixelHeight <= MAX_DETAIL_PIXELS) break;
+      if (pixelWidth * pixelHeight <= budget) break;
     }
     const area = pixelWidth * pixelHeight;
-    if (area > MAX_DETAIL_PIXELS) {
-      const k = Math.sqrt(MAX_DETAIL_PIXELS / area);
+    if (area > budget) {
+      const k = Math.sqrt(budget / area);
       pixelWidth *= k;
       pixelHeight *= k;
     }
 
     const controller = new AbortController();
-    pending.current = { controller, scale: view.scale, region };
+    const full = !view.zooming;
+    pending.current = { controller, scale: view.scale, region, full };
     const canvas = document.createElement('canvas');
     canvas.className = 'pdf-detail';
     Object.assign(canvas.style, {
@@ -213,7 +229,7 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
         if (controller.signal.aborted || !holderRef.current) return freeCanvas(canvas);
         removeCanvas(detail);
         holderRef.current.append(canvas);
-        detail.current = { canvas, scale: view.scale, region };
+        detail.current = { canvas, scale: view.scale, region, full };
       })
       .catch((error) => {
         if (pending.current?.controller === controller) pending.current = null;

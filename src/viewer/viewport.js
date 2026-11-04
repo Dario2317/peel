@@ -9,7 +9,7 @@ import { pageIndexAt, pagesInRange, PAGE_GAP } from './layout.js';
 import { clamp } from '../utils/platform.js';
 
 const SETTLE_MS = 100;
-const LIVE_MS = 200; // while moving: how often the sharp PDF area may be refreshed
+const LIVE_MS = 200; // while moving or zooming: how often the sharp PDF area may be refreshed
 
 export class Viewport {
   constructor(container, world, callbacks) {
@@ -27,7 +27,7 @@ export class Viewport {
     this.frame = 0;
     this.settleTimer = 0;
     this.liveTimer = 0;
-    this.settledScale = null; // the zoom at the last settle (live refreshes only while it stays the same)
+    this.lastLiveScale = null; // the zoom at the last live refresh (to tell zooming from moving)
   }
 
   destroy() {
@@ -246,8 +246,10 @@ export class Viewport {
     this.interacting = true;
     clearTimeout(this.settleTimer);
     this.world.style.willChange = 'transform';
-    // While you move the page (not zoom), keep the sharp PDF area ahead of the
-    // screen instead of waiting until you stop: no blurry edge while panning.
+    // While you move or zoom the page, keep refreshing the sharp PDF area
+    // instead of waiting until you stop (otherwise the page looks blurry for
+    // as long as your fingers are on the screen).
+    this.lastLiveScale = this.camera?.scale ?? null;
     clearInterval(this.liveTimer);
     this.liveTimer = setInterval(() => this.live(), LIVE_MS);
   }
@@ -259,9 +261,11 @@ export class Viewport {
   }
 
   live() {
-    if (!this.interacting || !this.ready || this.settledScale === null) return;
-    if (Math.abs(this.camera.scale / this.settledScale - 1) > 1e-3) return; // zooming: wait
-    this.cb.onLiveView?.(this.visibleWorldRect());
+    if (!this.interacting || !this.ready) return;
+    const { scale } = this.camera;
+    const zooming = this.lastLiveScale !== null && Math.abs(scale / this.lastLiveScale - 1) > 1e-3;
+    this.lastLiveScale = scale;
+    this.cb.onLiveView?.({ ...this.visibleWorldRect(), live: true, zooming });
   }
 
   settleSoon() {
@@ -272,7 +276,6 @@ export class Viewport {
   settle() {
     if (this.interacting || !this.ready) return;
     this.world.style.willChange = 'auto';
-    this.settledScale = this.camera.scale;
     this.cb.onSettle?.(this.visibleWorldRect());
   }
 
