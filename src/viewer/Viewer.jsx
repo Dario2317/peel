@@ -65,6 +65,7 @@ export function Viewer({
     const viewport = new Viewport(container, worldRef.current, {
       onRange: (first, last) => setRange([first, last]),
       onCurrentPage: (index) => props.current.onCurrentPageChange?.(index),
+      onLiveView: (live) => setView(live),
       onSettle: (settled) => {
         setView(settled);
         props.current.onViewSettled?.(viewport.getAnchor());

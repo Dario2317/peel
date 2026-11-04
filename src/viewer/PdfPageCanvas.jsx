@@ -13,7 +13,11 @@ import { PAGE_WIDTH, pageAspect } from './layout.js';
 // stays on screen until the new one is ready, then gets freed right away.
 const MAX_BASE_PIXELS = 3_000_000;
 const MAX_DETAIL_PIXELS = 8_000_000;
-const DETAIL_MARGINS = [0.15, 0.08, 0]; // extra area around the screen, biggest that fits
+const DETAIL_MARGINS = [0.2, 0.12, 0.06, 0]; // extra area around the screen, biggest that fits
+// While you move the page, a new detail render starts when the screen gets this
+// close (as a fraction of the screen) to the edge of the sharp area, so the
+// blurry base is never reached.
+const PRERENDER = 0.1;
 const STEP = 1.5; // base sharpness changes in steps, so tiny zooms don't re-render
 
 function stepUp(width) {
@@ -52,6 +56,7 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
   const holderRef = useRef(null);
   const base = useRef({ canvas: null });
   const detail = useRef({ canvas: null });
+  const pending = useRef(null); // the detail render in progress: { controller, scale, region }
   // The latest values, readable inside effects without re-running them.
   const latest = useRef({});
   latest.current = { page, priority };
@@ -68,6 +73,8 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
   // also runs when the page leaves the screen, freeing the canvases.)
   useEffect(() => {
     return () => {
+      pending.current?.controller.abort();
+      pending.current = null;
       removeCanvas(base);
       removeCanvas(detail);
     };
@@ -106,9 +113,14 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
 
   // Detail layer
   useEffect(() => {
+    const cancelPending = () => {
+      pending.current?.controller.abort();
+      pending.current = null;
+    };
     if (!view) return;
     const fullWidth = PAGE_WIDTH * view.scale * dpr; // whole page width in device pixels
     if (fullWidth <= baseWidth * 1.1) {
+      cancelPending();
       removeCanvas(detail); // the base is sharp enough
       return;
     }
@@ -123,11 +135,31 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
       FULL_CROP,
     );
     if (!onScreen) {
+      cancelPending();
       removeCanvas(detail);
       return;
     }
+    // The screen plus a little: if the sharp area doesn't cover this, it is
+    // time for a new one (before the edge of the old one is reached).
+    const wanted = intersect(
+      {
+        x: onScreen.x - onScreen.w * PRERENDER,
+        y: onScreen.y - onScreen.h * PRERENDER,
+        w: onScreen.w * (1 + 2 * PRERENDER),
+        h: onScreen.h * (1 + 2 * PRERENDER),
+      },
+      FULL_CROP,
+    );
     const d = detail.current;
-    if (d.canvas && d.scale === view.scale && contains(d.region, onScreen)) return; // still covers it
+    if (d.canvas && d.scale === view.scale && contains(d.region, wanted)) {
+      cancelPending(); // still covered: a render in progress is no longer needed
+      return;
+    }
+    // A render in progress that covers the screen keeps going (restarting it
+    // on every move would mean it never finishes while you keep moving).
+    const p = pending.current;
+    if (p && p.scale === view.scale && contains(p.region, onScreen)) return;
+    cancelPending();
 
     // Render a bit more than what's visible, so small pans stay sharp. If that
     // would be more pixels than a canvas may have, shrink the margin first:
@@ -157,6 +189,7 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
     }
 
     const controller = new AbortController();
+    pending.current = { controller, scale: view.scale, region };
     const canvas = document.createElement('canvas');
     canvas.className = 'pdf-detail';
     Object.assign(canvas.style, {
@@ -176,16 +209,17 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
       controller.signal,
     )
       .then(() => {
+        if (pending.current?.controller === controller) pending.current = null;
         if (controller.signal.aborted || !holderRef.current) return freeCanvas(canvas);
         removeCanvas(detail);
         holderRef.current.append(canvas);
         detail.current = { canvas, scale: view.scale, region };
       })
       .catch((error) => {
+        if (pending.current?.controller === controller) pending.current = null;
         freeCanvas(canvas);
         if (!isCancel(error)) console.warn('PDF detail render failed', error);
       });
-    return () => controller.abort();
   }, [view, cropKey, rect.x, rect.y, rect.w, rect.h, baseWidth, aspect, dpr]);
 
   return <div className="pdf-holder" ref={holderRef} />;
