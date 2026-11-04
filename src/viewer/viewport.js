@@ -27,7 +27,7 @@ export class Viewport {
     this.frame = 0;
     this.settleTimer = 0;
     this.liveTimer = 0;
-    this.lastLiveScale = null; // the zoom at the last live refresh (to tell zooming from moving)
+    this.lastLive = null; // the camera at the last live refresh (to tell zooming from moving, and where to)
   }
 
   destroy() {
@@ -249,7 +249,7 @@ export class Viewport {
     // While you move or zoom the page, keep refreshing the sharp PDF area
     // instead of waiting until you stop (otherwise the page looks blurry for
     // as long as your fingers are on the screen).
-    this.lastLiveScale = this.camera?.scale ?? null;
+    this.lastLive = this.camera;
     clearInterval(this.liveTimer);
     this.liveTimer = setInterval(() => this.live(), LIVE_MS);
   }
@@ -262,10 +262,16 @@ export class Viewport {
 
   live() {
     if (!this.interacting || !this.ready) return;
-    const { scale } = this.camera;
-    const zooming = this.lastLiveScale !== null && Math.abs(scale / this.lastLiveScale - 1) > 1e-3;
-    this.lastLiveScale = scale;
-    this.cb.onLiveView?.({ ...this.visibleWorldRect(), live: true, zooming });
+    const cam = this.camera;
+    const last = this.lastLive ?? cam;
+    this.lastLive = cam;
+    const zooming = Math.abs(cam.scale / last.scale - 1) > 1e-3;
+    // Which way you are moving (-1, 0, 1 on each axis): the sharp area is
+    // rendered further ahead in that direction. Moving the pages left means
+    // looking further right.
+    const way = (d) => (Math.abs(d) < 2 ? 0 : d < 0 ? 1 : -1);
+    const heading = zooming ? { x: 0, y: 0 } : { x: way(cam.x - last.x), y: way(cam.y - last.y) };
+    this.cb.onLiveView?.({ ...this.visibleWorldRect(), live: true, zooming, heading });
   }
 
   settleSoon() {

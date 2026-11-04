@@ -12,17 +12,26 @@ import { PAGE_WIDTH, pageAspect } from './layout.js';
 // Canvases are created and swapped by hand (not by React) so the old one
 // stays on screen until the new one is ready, then gets freed right away.
 const MAX_BASE_PIXELS = 3_000_000;
-const MAX_DETAIL_PIXELS = 8_000_000;
-const DETAIL_MARGINS = [0.2, 0.12, 0.06, 0]; // extra area around the screen, biggest that fits
+// Every PDF render costs battery, so the pictures are only as big as needed:
+// the screen at full sharpness plus a small margin (moving further renders
+// a new one ahead of time, see PRERENDER).
+const MAX_DETAIL_PIXELS = 6_000_000;
+// [margin all around, extra margin in the direction you are moving], as
+// fractions of the screen: the first one that fits in the pixel limit is used.
+const DETAIL_MARGINS = [[0.1, 0], [0.05, 0], [0, 0]];
+const MOVING_MARGINS = [[0.05, 0.45], [0.05, 0.3], [0.05, 0.15], [0, 0]];
 // While you pinch, the page is redrawn a few times a second: smaller pictures,
 // so each one is ready fast and the pinch stays smooth. The full one comes
 // when you let go.
-const ZOOMING_MARGINS = [0.06, 0];
-const MAX_ZOOMING_PIXELS = 4_000_000;
+const ZOOMING_MARGINS = [[0.05, 0], [0, 0]];
+const MAX_ZOOMING_PIXELS = 2_500_000;
+// ...and only once the zoom has changed this much since the last picture
+// (a picture up to 30% off still looks fine while it moves).
+const ZOOMING_TOLERANCE = 0.3;
 // While you move the page, a new detail render starts when the screen gets this
 // close (as a fraction of the screen) to the edge of the sharp area, so the
 // blurry base is never reached.
-const PRERENDER = 0.1;
+const PRERENDER = 0.05; // (the margins below are at least this big, or every check would fail)
 const STEP = 1.5; // base sharpness changes in steps, so tiny zooms don't re-render
 
 function stepUp(width) {
@@ -155,12 +164,18 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
       },
       FULL_CROP,
     );
-    const sameScale = (a) => Math.abs(a / view.scale - 1) < 0.01;
-    // While you pinch a quick, smaller picture will do; once you stop, only a
-    // full one does.
-    const goodEnough = (r) => sameScale(r.scale) && (r.full || view.live);
+    const sameScale = (a, tolerance = 0.01) => Math.abs(a / view.scale - 1) < tolerance;
+    // While the zoom changes a quick, smaller picture will do, and one made at
+    // a slightly different zoom too; once it stops (even with the fingers
+    // still on the screen), only a full one at the right zoom does.
+    const goodEnough = (r) =>
+      view.zooming ? sameScale(r.scale, ZOOMING_TOLERANCE) : sameScale(r.scale) && r.full;
     const d = detail.current;
-    if (d.canvas && goodEnough(d) && contains(d.region, wanted)) {
+    // While moving, the sharp area must reach a bit past the screen (so the
+    // next one is ready in time); at rest, covering the screen is enough.
+    // (While zooming, covering the screen is enough too: the zoom changes the
+    // area anyway.)
+    if (d.canvas && goodEnough(d) && contains(d.region, view.live && !view.zooming ? wanted : onScreen)) {
       cancelPending(); // still covered: a render in progress is no longer needed
       return;
     }
@@ -182,13 +197,20 @@ export function PdfPageCanvas({ page, rect, view, priority }) {
     let pixelWidth = 0;
     let pixelHeight = 0;
     const budget = view.zooming ? MAX_ZOOMING_PIXELS : MAX_DETAIL_PIXELS;
-    for (const margin of view.zooming ? ZOOMING_MARGINS : DETAIL_MARGINS) {
+    const heading = view.heading ?? { x: 0, y: 0 };
+    const moving = view.live && !view.zooming && (heading.x || heading.y);
+    const options = view.zooming ? ZOOMING_MARGINS : moving ? MOVING_MARGINS : DETAIL_MARGINS;
+    for (const [margin, ahead] of options) {
+      const left = margin + (heading.x < 0 ? ahead : 0);
+      const right = margin + (heading.x > 0 ? ahead : 0);
+      const top = margin + (heading.y < 0 ? ahead : 0);
+      const bottom = margin + (heading.y > 0 ? ahead : 0);
       region = intersect(
         {
-          x: onScreen.x - onScreen.w * margin,
-          y: onScreen.y - onScreen.h * margin,
-          w: onScreen.w * (1 + 2 * margin),
-          h: onScreen.h * (1 + 2 * margin),
+          x: onScreen.x - onScreen.w * left,
+          y: onScreen.y - onScreen.h * top,
+          w: onScreen.w * (1 + left + right),
+          h: onScreen.h * (1 + top + bottom),
         },
         FULL_CROP,
       );
