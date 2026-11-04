@@ -31,7 +31,12 @@ const SMOOTH_WIDTH = 3.5; // units, at full smoothing (strokes saved before `sw`
 // steps of the screen's pixel grid), up to about 3 px at full smoothing.
 const SMOOTH_PX = 2.6;
 const SMOOTH_MIN = 0.3;
-const SIMPLIFY = 0.04; // units a simplified line may differ from the smoothed one
+// How far a simplified line may differ from the smoothed one, as a fraction of
+// the smoothing width (so it stays invisible at any zoom).
+const SIMPLIFY = 0.05;
+// The smallest gap kept between points, as a fraction of the pen width: closer
+// points only add the Pencil's jitter (see thinPoints).
+const MIN_SPACING = 0.15;
 
 // The smoothing width (in units) for a stroke drawn at this zoom.
 export function smoothWidthFor(smooth, scale) {
@@ -47,10 +52,18 @@ export function isLineStroke(stroke) {
   return !stroke.pressure;
 }
 
+// perfect-freehand is made for screen pixels and a pen about 16 px wide: some of
+// its limits are fixed numbers (it drops the last 3 px of a line as noise, a
+// first point gets a 1 px nudge, …). Our strokes are in page units, where a thin
+// pen at high zoom is 0.6 wide: those 3 "px" are 5 pen widths, which made a
+// straight spike at the end of the line. So it always gets a 16-wide pen: the
+// points are scaled up for it and the outline is scaled back down.
+const FREEHAND_SIZE = 16;
+
 function strokeOptions(stroke, finished) {
   const smooth = stroke.smooth ?? 0.5;
   return {
-    size: stroke.size,
+    size: FREEHAND_SIZE,
     thinning: stroke.pressure ? 0.55 : 0, // no pressure → even width, like a fineliner
     smoothing: 0.25, // keep the outline detailed
     streamline: 0.05 + 0.3 * smooth, // steadier line, but keep up with fast strokes
@@ -110,9 +123,9 @@ function collapseEnd(points, radius) {
  * exactly where you drew it.
  *   points: [[x, y, pressure], …]
  */
-export function smoothPoints(points, sigma) {
-  if (sigma < 0.05 || points.length < 3) return points;
-  points = thinPoints(points, sigma * THIN_FRACTION);
+export function smoothPoints(points, sigma, minSpacing = 0) {
+  if (!(sigma > 0) || points.length < 3) return points;
+  points = thinPoints(points, Math.max(sigma * THIN_FRACTION, minSpacing));
   if (points.length < 3) return points;
   const dist = [0]; // distance along the line to each point
   for (let i = 1; i < points.length; i++) {
@@ -121,7 +134,7 @@ export function smoothPoints(points, sigma) {
   const total = dist[dist.length - 1];
   return points.map((p, i) => {
     const s = Math.min(sigma, dist[i] / 2, (total - dist[i]) / 2);
-    if (s < 0.05) return p;
+    if (s < sigma * 1e-3) return p;
     let weights = 0;
     let x = 0;
     let y = 0;
@@ -173,27 +186,39 @@ export function strokePath(stroke, finished = true) {
   return d;
 }
 
+// The drawn points, cleaned up: jitter dropped, smoothed (see smoothPoints).
+function cleanPoints(stroke, points) {
+  return smoothPoints(points, sigmaOf(stroke), stroke.size * MIN_SPACING);
+}
+
 function computePath(stroke, finished) {
   const points = toPoints(stroke.points);
-  const dot = points.length === 1 || isDot(points);
+  const dot = points.length === 1 || isDot(points, stroke.size);
   if (isLineStroke(stroke)) {
-    if (dot) return `M${f(points[0][0])},${f(points[0][1])}l0.01,0`; // the round tip makes it a dot
-    return curvePath(simplify(smoothPoints(points, sigmaOf(stroke)), SIMPLIFY));
+    if (dot) return `M${f(points[0][0])},${f(points[0][1])}l0.001,0`; // the round tip makes it a dot
+    return curvePath(simplify(cleanPoints(stroke, points), sigmaOf(stroke) * SIMPLIFY));
   }
   if (dot) {
     const [x, y] = points[0];
     const r = stroke.size / 2;
     return `M${x - r},${y}a${r},${r} 0 1,0 ${r * 2},0a${r},${r} 0 1,0 ${-r * 2},0`;
   }
-  return outlineToPath(getStroke(smoothPoints(points, sigmaOf(stroke)), strokeOptions(stroke, finished)));
+  return outlineToPath(freehandOutline(cleanPoints(stroke, points), stroke, finished));
+}
+
+// perfect-freehand's outline, computed for a 16-wide pen (see FREEHAND_SIZE).
+function freehandOutline(points, stroke, finished) {
+  const k = FREEHAND_SIZE / stroke.size;
+  const scaled = points.map(([x, y, p]) => [x * k, y * k, p]);
+  return getStroke(scaled, strokeOptions(stroke, finished)).map(([x, y]) => [x / k, y / k]);
 }
 
 // The smoothed points of a stroke as it is being drawn (for the canvas).
 export function liveLinePoints(stroke) {
-  return smoothPoints(toPoints(stroke.points), sigmaOf(stroke));
+  return cleanPoints(stroke, toPoints(stroke.points));
 }
 
-const f = (v) => v.toFixed(2);
+const f = (v) => v.toFixed(3); // 0.001 units: invisible even at the highest zoom
 
 /**
  * A smooth curve through the points (centripetal Catmull-Rom, as cubic
@@ -258,18 +283,20 @@ export function simplify(points, tolerance) {
   return points.filter((_, i) => keep[i]);
 }
 
-function isDot(points) {
+// A tap (all points within about half a pen width) is drawn as a dot.
+function isDot(points, size) {
   const [x0, y0] = points[0];
-  return points.every(([x, y]) => Math.abs(x - x0) < 0.5 && Math.abs(y - y0) < 0.5);
+  const r = Math.min(0.5, size * 0.4);
+  return points.every(([x, y]) => Math.abs(x - x0) < r && Math.abs(y - y0) < r);
 }
 
 // From the perfect-freehand README: outline points → smooth closed SVG path.
 function outlineToPath(outline) {
   if (outline.length < 4) return '';
-  const avg = (a, b) => ((a + b) / 2).toFixed(2);
+  const avg = (a, b) => f((a + b) / 2);
   let [a, b] = outline;
   const c = outline[2];
-  let d = `M${a[0].toFixed(2)},${a[1].toFixed(2)} Q${b[0].toFixed(2)},${b[1].toFixed(2)} ${avg(b[0], c[0])},${avg(b[1], c[1])} T`;
+  let d = `M${f(a[0])},${f(a[1])} Q${f(b[0])},${f(b[1])} ${avg(b[0], c[0])},${avg(b[1], c[1])} T`;
   for (let i = 2; i < outline.length - 1; i++) {
     a = outline[i];
     b = outline[i + 1];
@@ -330,3 +357,8 @@ export function predictedPoints(e) {
 }
 
 export const round1 = (v) => Math.round(v * 10) / 10;
+
+// Where the Pencil was, in page units. Rounded to 0.001: at 20x zoom that is
+// 0.02 px. (Rounding to 0.1 made a staircase at high zoom: 1.6 px steps at 16x,
+// bigger than the Pencil moves between two samples, which showed as hairy edges.)
+export const roundUnit = (v) => Math.round(v * 1000) / 1000;

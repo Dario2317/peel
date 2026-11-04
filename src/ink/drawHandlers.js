@@ -1,7 +1,7 @@
 // Pointer handlers for drawing, erasing and the lasso, used by the post-it
 // boards now and by the pages in milestone 3. They plug into input.js
 // through routePointer: each returns { move(e), up(e), cancel() }.
-import { eventPoints, hasRealPressure, predictedPoints, round1, smoothWidthFor, strokeHit } from './ink.js';
+import { eventPoints, hasRealPressure, predictedPoints, round1, roundUnit, smoothWidthFor, strokeHit } from './ink.js';
 import { recognizeShape, shapePoints } from './shapes.js';
 import { newId } from '../utils/ids.js';
 
@@ -28,7 +28,7 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
     // The smoothing follows what you see: the same on screen at any zoom.
     sw: round1(smoothWidthFor(style.smooth, getCamera().scale) * 100) / 100,
     pressure: false,
-    points: [round1(x), round1(y), e.pressure || 0.5],
+    points: [roundUnit(x), roundUnit(y), e.pressure || 0.5],
   };
   let shape = null;
   let holdTimer = 0;
@@ -50,8 +50,10 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
     for (const p of eventPoints(ev)) {
       const [px, py] = toWorld(p.clientX, p.clientY);
       const n = stroke.points.length;
-      if (round1(px) === stroke.points[n - 3] && round1(py) === stroke.points[n - 2]) continue; // same spot
-      stroke.points.push(round1(px), round1(py), p.pressure || 0.5);
+      const ux = roundUnit(px);
+      const uy = roundUnit(py);
+      if (ux === stroke.points[n - 3] && uy === stroke.points[n - 2]) continue; // same spot
+      stroke.points.push(ux, uy, p.pressure || 0.5);
     }
   };
 
@@ -69,6 +71,10 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
         armHold(); // moved: start counting the hold again
       }
       const ahead = predictedPoints(ev).flatMap((p) => [...toWorld(p.clientX, p.clientY), p.pressure || 0.5]);
+      // Draw it while you write the same way it will be saved: with the
+      // Pencil's pressure as soon as it really changes (otherwise the line
+      // changed its look the moment you lifted the Pencil).
+      stroke.pressure = hasRealPressure(stroke.points);
       wet.draw(stroke, getCamera(), ahead);
     },
     up(ev) {
