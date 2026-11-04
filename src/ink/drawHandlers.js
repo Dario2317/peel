@@ -1,7 +1,7 @@
 // Pointer handlers for drawing, erasing and the lasso, used by the post-it
 // boards now and by the pages in milestone 3. They plug into input.js
 // through routePointer: each returns { move(e), up(e), cancel() }.
-import { eventPoints, hasRealPressure, predictedPoints, round1, roundUnit, smoothWidthFor, strokeHit } from './ink.js';
+import { eventPoints, predictedPoints, round1, roundUnit, smoothWidthFor, strokeHit } from './ink.js';
 import { recognizeShape, shapePoints } from './shapes.js';
 import { newId } from '../utils/ids.js';
 
@@ -33,6 +33,24 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
   let shape = null;
   let holdTimer = 0;
   let still = { x: e.clientX, y: e.clientY };
+  // Apple Pencil: the iPad doesn't always report the same pressure when it
+  // doesn't change (USB-C Pencil: no pressure at all). Use it only if it
+  // really changes (the lowest and highest so far, kept as points come in).
+  let lowest = stroke.points[2];
+  let highest = stroke.points[2];
+  const realPressure = () => highest - lowest > 0.05;
+  // The Pencil reports up to 240 positions a second, the screen shows 60 (or
+  // 120): the line on screen is redrawn once per frame, with all the points
+  // that arrived since, not once per event.
+  let frame = 0;
+  let ahead = [];
+  const drawSoon = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      if (!shape) wet.draw(stroke, getCamera(), ahead);
+    });
+  };
 
   const snapped = () => ({ ...stroke, shape, points: shapePoints(shape, stroke.size) });
   const armHold = () => {
@@ -53,7 +71,10 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
       const ux = roundUnit(px);
       const uy = roundUnit(py);
       if (ux === stroke.points[n - 3] && uy === stroke.points[n - 2]) continue; // same spot
-      stroke.points.push(ux, uy, p.pressure || 0.5);
+      const pressure = p.pressure || 0.5;
+      if (pressure < lowest) lowest = pressure;
+      if (pressure > highest) highest = pressure;
+      stroke.points.push(ux, uy, pressure);
     }
   };
 
@@ -70,15 +91,16 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
         still = { x: ev.clientX, y: ev.clientY };
         armHold(); // moved: start counting the hold again
       }
-      const ahead = predictedPoints(ev).flatMap((p) => [...toWorld(p.clientX, p.clientY), p.pressure || 0.5]);
+      ahead = predictedPoints(ev).flatMap((p) => [...toWorld(p.clientX, p.clientY), p.pressure || 0.5]);
       // Draw it while you write the same way it will be saved: with the
       // Pencil's pressure as soon as it really changes (otherwise the line
       // changed its look the moment you lifted the Pencil).
-      stroke.pressure = hasRealPressure(stroke.points);
-      wet.draw(stroke, getCamera(), ahead);
+      stroke.pressure = realPressure();
+      drawSoon();
     },
     up(ev) {
       clearTimeout(holdTimer);
+      cancelAnimationFrame(frame);
       wet.clear();
       if (shape) {
         onDone(snapped());
@@ -87,11 +109,12 @@ export function drawStroke(e, { style, toWorld, wet, getCamera, onDone, recogniz
       // When you draw fast, the last bit of the line arrives with the
       // "lifted" event: keep it, or fast strokes end too early.
       if (ev) addPoints(ev);
-      stroke.pressure = hasRealPressure(stroke.points);
+      stroke.pressure = realPressure();
       onDone(stroke);
     },
     cancel() {
       clearTimeout(holdTimer);
+      cancelAnimationFrame(frame);
       wet.clear();
     },
   };
@@ -132,12 +155,19 @@ export function eraseStrokes(e, { toWorld, radius, getStrokes, removeStrokes, on
  */
 export function drawLasso(e, { toWorld, wet, getCamera, onDone }) {
   const points = [...toWorld(e.clientX, e.clientY)];
+  let frame = 0; // drawn once per frame, like the pen
   return {
     move(ev) {
       for (const p of eventPoints(ev)) points.push(...toWorld(p.clientX, p.clientY));
-      wet.drawLasso(points, getCamera());
+      if (!frame) {
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          wet.drawLasso(points, getCamera());
+        });
+      }
     },
     up(ev) {
+      cancelAnimationFrame(frame);
       if (ev) points.push(...toWorld(ev.clientX, ev.clientY));
       wet.clear();
       const polygon = [];
@@ -145,6 +175,7 @@ export function drawLasso(e, { toWorld, wet, getCamera, onDone }) {
       onDone(polygon);
     },
     cancel() {
+      cancelAnimationFrame(frame);
       wet.clear();
     },
   };

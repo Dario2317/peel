@@ -49,6 +49,11 @@ export async function openPdf(blob) {
     iccUrl: assetUrl('iccs'),
     isEvalSupported: false,
     enableXfa: false,
+    // Draw pages with the GPU, like pdf.js's own viewer. Without this pdf.js
+    // asks the browser for canvases that are drawn by the processor and then
+    // copied for the screen (it marks them "read often"), which costs battery
+    // on every page render and every frame the screen updates.
+    enableHWA: true,
   });
   return task.promise;
 }

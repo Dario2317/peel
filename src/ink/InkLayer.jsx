@@ -16,12 +16,15 @@ export const InkLayer = memo(function InkLayer({ strokes, dark = false, moving =
   const pens = strokes.filter((s) => s.tool !== 'highlighter');
   const offset = moving ? `translate(${moving.dx} ${moving.dy})` : undefined;
 
-  const group = (list) => (
-    <>
-      {list.filter((s) => !isMoving(s)).map((s) => renderStroke(s, dark))}
-      {moving && <g transform={offset}>{list.filter(isMoving).map((s) => renderStroke(s, dark))}</g>}
-    </>
-  );
+  const group = (list) => {
+    const still = moving ? list.filter((s) => !isMoving(s)) : list;
+    return (
+      <>
+        {chunks(still).map((chunk, i) => <StrokeChunk key={i} strokes={chunk} dark={dark} />)}
+        {moving && <g transform={offset}>{list.filter(isMoving).map((s) => renderStroke(s, dark))}</g>}
+      </>
+    );
+  };
 
   return (
     <svg className={`ink-layer ${className}`} aria-hidden="true">
@@ -34,6 +37,20 @@ export const InkLayer = memo(function InkLayer({ strokes, dark = false, moving =
     </svg>
   );
 });
+
+// A page can hold hundreds of strokes. Adding one shouldn't make React go
+// through all of them again: they're drawn in groups of CHUNK, and a group
+// whose strokes are all the same as last time is skipped.
+const CHUNK = 50;
+function chunks(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i += CHUNK) out.push(list.slice(i, i + CHUNK));
+  return out;
+}
+const sameStrokes = (a, b) => a.dark === b.dark && a.strokes.length === b.strokes.length && a.strokes.every((s, i) => s === b.strokes[i]);
+const StrokeChunk = memo(function StrokeChunk({ strokes, dark }) {
+  return strokes.map((s) => renderStroke(s, dark));
+}, sameStrokes);
 
 // Shapes and strokes without pressure are lines with a round tip; strokes
 // with pressure are filled outlines (thinner and thicker).

@@ -5,6 +5,7 @@ import { computeLayout } from './layout.js';
 import { PageView } from './PageView.jsx';
 import { markPencilSeen } from './pencil.js';
 import { WetInk } from '../ink/WetInk.js';
+import { HoverDot } from '../ink/HoverDot.js';
 import '../ink/ink.css';
 
 /**
@@ -27,6 +28,7 @@ export function Viewer({
   const wetRef = useRef(null);
   const wetInk = useRef(null);
   const hoverRef = useRef(null);
+  const hoverDot = useRef(null);
   const [range, setRange] = useState([0, -1]);
   const [view, setView] = useState(null); // the settled view, for sharp rendering
 
@@ -42,21 +44,8 @@ export function Viewer({
 
   // The Pencil hover dot (or the eraser circle), in screen pixels.
   const showCursor = (clientX, clientY) => {
-    const dot = hoverRef.current;
     const look = clientX === null ? null : props.current.cursorFor?.();
-    if (!dot) return;
-    if (!look) {
-      dot.style.display = 'none';
-      return;
-    }
-    const box = containerRef.current.getBoundingClientRect();
-    const diameter = look.eraser ? 24 : Math.max(4, look.diameter);
-    dot.className = `hover-dot ${look.eraser ? 'eraser' : ''}`;
-    dot.style.display = 'block';
-    dot.style.width = dot.style.height = `${diameter}px`;
-    dot.style.background = look.eraser ? '' : look.color;
-    dot.style.left = `${clientX - box.left}px`;
-    dot.style.top = `${clientY - box.top}px`;
+    hoverDot.current?.show(clientX, clientY, look);
   };
 
   // Create the engine and the input handler once.
@@ -90,6 +79,7 @@ export function Viewer({
       rails: true,
     });
     wetInk.current = new WetInk(wetRef.current);
+    hoverDot.current = new HoverDot(hoverRef.current, container);
 
     // Size changes (first layout, rotating the iPad, Split View) keep your place.
     const measure = () => {
@@ -98,6 +88,7 @@ export function Viewer({
       const firstTime = !viewport.ready;
       viewport.setSize(clientWidth, clientHeight);
       wetInk.current.resize(clientWidth, clientHeight);
+      hoverDot.current.invalidate();
       if (firstTime) viewport.restoreAnchor(props.current.initialView);
     };
     measure(); // right away, so the pages appear in the very first frame
@@ -119,6 +110,7 @@ export function Viewer({
       observer.disconnect();
       gestures.destroy();
       viewport.destroy();
+      hoverDot.current.destroy();
     };
   }, []);
 

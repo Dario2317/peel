@@ -6,6 +6,7 @@ import { markPencilSeen, pencil } from '../viewer/pencil.js';
 import { zoomAround } from '../viewer/camera.js';
 import { colorValue, POSTIT_COLORS } from '../overlay/looks.js';
 import { WetInk } from '../ink/WetInk.js';
+import { HoverDot } from '../ink/HoverDot.js';
 import { strokeBox } from '../ink/ink.js';
 import { dragSelection, drawLasso, drawStroke, eraseStrokes } from '../ink/drawHandlers.js';
 import { moveStroke, selectInLasso, textHeight } from '../ink/lasso.js';
@@ -386,23 +387,13 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
     const getCamera = () => camera;
 
     // The dot that shows where the Pencil is (hover), or the eraser circle.
+    const hoverDot = new HoverDot(hoverRef.current, container);
     const showCursor = (clientX, clientY) => {
-      const dot = hoverRef.current;
       const { ink, typing, editable } = latest.current;
       const style = strokeStyle(ink);
       const eraser = ink.tool === 'eraser';
-      if (clientX === null || !editable || typing || (!style && !eraser)) {
-        dot.style.display = 'none';
-        return;
-      }
-      const r = container.getBoundingClientRect();
-      const diameter = eraser ? ERASER_RADIUS_PX * 2 : Math.max(4, style.size * camera.scale);
-      dot.className = `hover-dot ${eraser ? 'eraser' : ''}`;
-      dot.style.display = 'block';
-      dot.style.width = dot.style.height = `${diameter}px`;
-      dot.style.background = eraser ? '' : displayColor(style.color, latest.current.dark);
-      dot.style.left = `${clientX - r.left}px`;
-      dot.style.top = `${clientY - r.top}px`;
+      if (clientX === null || !editable || typing || (!style && !eraser)) return hoverDot.hide();
+      hoverDot.show(clientX, clientY, eraser ? { eraser: true } : { diameter: style.size * camera.scale, color: displayColor(style.color, latest.current.dark) });
     };
 
     const insideSelection = (clientX, clientY) => {
@@ -520,6 +511,7 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
     const observer = new ResizeObserver(() => {
       size = { width: container.clientWidth, height: container.clientHeight };
       wet.resize(size.width, size.height);
+      hoverDot.invalidate();
       setCamera(camera);
     });
     observer.observe(container);
@@ -565,6 +557,7 @@ export function NoteBoard({ store, pageId, itemId, editable, startTyping, onClos
       clearTimeout(zoomTimer);
       observer.disconnect();
       gestures.destroy();
+      hoverDot.destroy();
       // Remember where you were on this board (not an undo step).
       const current = note();
       if (current && editable) store.change(pageId, current, { ...current, view: camera }, { history: false });

@@ -17,7 +17,8 @@
   pointer-events: none;
 }
 
-/* Where the Pencil will land (Pencil hover) */
+/* Where the Pencil will land (Pencil hover). Positioned by HoverDot.js with
+   a transform, on its own layer: moving it doesn't repaint anything else. */
 .hover-dot {
   position: absolute;
   top: 0;
@@ -25,7 +26,7 @@
   border-radius: 50%;
   pointer-events: none;
   opacity: 0.55;
-  transform: translate(-50%, -50%);
+  will-change: transform;
 }
 .hover-dot.eraser {
   border: 1.5px solid rgba(40, 30, 20, 0.7);

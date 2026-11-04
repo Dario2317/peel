@@ -520,7 +520,12 @@ export function NotebookScreen({ notebookId, onBack }) {
           <>
             <button
               className="icon-button"
-              onClick={() => setCropPage(current)}
+              onClick={() => {
+                // The crop tool moves the page's annotations in the database:
+                // save what's waiting first (saving waits for a pause).
+                store?.flush();
+                setCropPage(current);
+              }}
               disabled={!current || current.kind === 'blank'}
               aria-label="Crop"
               title="Crop"

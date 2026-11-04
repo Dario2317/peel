@@ -10,7 +10,11 @@
 // Undo simply applies the change backwards (after → before).
 import { db } from '../db/db.js';
 
-const SAVE_DELAY_MS = 300;
+// Saving writes the whole page (every stroke on it) to the database, so it
+// waits for a pause: while you keep writing, at most every SAVE_MAX_WAIT_MS.
+// (Leaving the notebook, or the app going to the background, saves at once.)
+const SAVE_DELAY_MS = 2000;
+const SAVE_MAX_WAIT_MS = 15000;
 const HISTORY_LIMIT = 200;
 
 export class AnnotationStore {
@@ -21,6 +25,7 @@ export class AnnotationStore {
     this.listeners = new Set(); // called on any change (e.g. undo buttons)
     this.dirty = new Set(); // pages waiting to be saved
     this.saveTimer = 0;
+    this.saveDeadline = 0; // when the oldest unsaved change must be saved at the latest
     this.undoStack = [];
     this.redoStack = [];
     this.version = 0; // bumps on every change, for React
@@ -123,13 +128,16 @@ export class AnnotationStore {
   // --- Saving ----------------------------------------------------------------
 
   scheduleSave() {
+    const now = Date.now();
+    if (!this.saveDeadline) this.saveDeadline = now + SAVE_MAX_WAIT_MS;
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.flush(), SAVE_DELAY_MS);
+    this.saveTimer = setTimeout(() => this.flush(), Math.max(0, Math.min(SAVE_DELAY_MS, this.saveDeadline - now)));
   }
 
   // Writes all changed pages now (also called when the app goes to the background).
   async flush() {
     clearTimeout(this.saveTimer);
+    this.saveDeadline = 0;
     const pages = [...this.dirty];
     this.dirty.clear();
     if (!pages.length) return;
