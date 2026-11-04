@@ -11,10 +11,24 @@ describe('smoothing', () => {
     expect(Math.max(...middle)).toBeLessThan(0.1);
   });
 
-  it('keeps the ends where you drew them', () => {
+  it('keeps the ends close to where you drew them', () => {
     const smooth = smoothPoints(wobbly, 3);
-    expect(smooth[0]).toEqual(wobbly[0]);
-    expect(smooth[59]).toEqual(wobbly[59]);
+    const first = smooth[0];
+    const last = smooth[smooth.length - 1];
+    expect(Math.hypot(first[0] - wobbly[0][0], first[1] - wobbly[0][1])).toBeLessThan(3);
+    expect(Math.hypot(last[0] - wobbly[59][0], last[1] - wobbly[59][1])).toBeLessThan(3);
+  });
+
+  it('does not leave a knob when the Pencil rests before lifting', () => {
+    const line = Array.from({ length: 30 }, (_, i) => [i * 2, 0, 0.5]);
+    const rest = Array.from({ length: 12 }, (_, i) => [60 + (i % 2 ? 0.5 : -0.5), i % 3 ? 0.4 : -0.4, 0.5]);
+    const smooth = smoothPoints([...line, ...rest], 2);
+    const last = smooth[smooth.length - 1];
+    expect(last[0]).toBeGreaterThan(57);
+    expect(Math.abs(last[1])).toBeLessThan(0.5);
+    // the resting points became one: nothing close to the end but the end itself
+    const nearEnd = smooth.filter((p) => Math.hypot(p[0] - last[0], p[1] - last[1]) < 1);
+    expect(nearEnd.length).toBe(1);
   });
 
   it('leaves the line alone at zero', () => {

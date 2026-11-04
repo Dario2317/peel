@@ -59,6 +59,50 @@ function strokeOptions(stroke, finished) {
   };
 }
 
+// When the Pencil slows down or stops (at the end of a stroke, in a corner),
+// it reports many points almost on top of each other. Their jitter would
+// stay in the line (the smoothing window is tiny there) and show as a blob
+// or a little hook at the end. So points closer than this fraction of the
+// smoothing width to the previous kept one are dropped. The first and last
+// point always stay.
+const THIN_FRACTION = 0.5;
+export function thinPoints(points, minDist) {
+  if (minDist <= 0 || points.length < 3) return points;
+  points = collapseEnd(collapseEnd(points, minDist * 1.5).reverse(), minDist * 1.5).reverse();
+  if (points.length < 3) return points;
+  const out = [points[0]];
+  for (let i = 1; i < points.length - 1; i++) {
+    const last = out[out.length - 1];
+    if (Math.hypot(points[i][0] - last[0], points[i][1] - last[1]) >= minDist) out.push(points[i]);
+  }
+  const end = points[points.length - 1];
+  const last = out[out.length - 1];
+  // A last point right next to the previous one replaces it (keeps where you lifted off).
+  if (out.length > 1 && Math.hypot(end[0] - last[0], end[1] - last[1]) < minDist) out.pop();
+  out.push(end);
+  return out;
+}
+
+// The points at the very end that all lie within `radius` of the last one
+// (the Pencil resting before it lifts) become one point, their average.
+// Otherwise the last point's jitter makes a knob at the end of the line.
+function collapseEnd(points, radius) {
+  const end = points[points.length - 1];
+  let start = points.length - 1;
+  while (start > 0 && Math.hypot(points[start - 1][0] - end[0], points[start - 1][1] - end[1]) <= radius) start--;
+  if (start >= points.length - 1 || start === 0) return points;
+  let x = 0;
+  let y = 0;
+  let p = 0;
+  for (let i = start; i < points.length; i++) {
+    x += points[i][0];
+    y += points[i][1];
+    p += points[i][2];
+  }
+  const n = points.length - start;
+  return [...points.slice(0, start), [x / n, y / n, p / n]];
+}
+
 /**
  * Smooths a line without making it lag: every point becomes a weighted
  * average of its neighbors along the line (a Gaussian, `sigma` units wide).
@@ -68,6 +112,8 @@ function strokeOptions(stroke, finished) {
  */
 export function smoothPoints(points, sigma) {
   if (sigma < 0.05 || points.length < 3) return points;
+  points = thinPoints(points, sigma * THIN_FRACTION);
+  if (points.length < 3) return points;
   const dist = [0]; // distance along the line to each point
   for (let i = 1; i < points.length; i++) {
     dist.push(dist[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
