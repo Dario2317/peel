@@ -68,6 +68,14 @@ code goes online, never your books or notes.
 - **Undo / Redo**: buttons, two-finger tap (undo), three-finger tap (redo), Ctrl/Cmd+Z.
 - **Study**: every tape goes back on. Tap the highlighted one to peel it, then
   answer Got it or Missed. Missed tapes come first next time.
+- **Export PDF** (the share button at the top, or ··· → **Export PDF…** in
+  the library): makes a PDF of the notebook with everything you added. Pick
+  all pages, this page, or from–to; tapes on (answers hidden) or off;
+  post-it notes in or out; standard or high quality. Each note with
+  something on it gets its own page right after its page: tap the numbered
+  note to jump there, and "back to page" to return. Ink next to a page makes
+  that PDF page bigger, so nothing is cut off. When it's ready, **Share…**
+  (on the iPad: Save to Files, AirDrop, Mail…) or **Save**.
 
 Once an Apple Pencil has been used, fingers only scroll, zoom and tap, so a
 resting palm never moves anything.
@@ -86,6 +94,7 @@ src/
   text/                text boxes: the bundled fonts, the options bar
   tools/               toolbar, what each tool does, the post-it and tape panels
   study/               study mode: session order, study bar, summary
+  export/              PDF export: draws each page on a canvas, writes the PDF
   state/               the annotation store (saving, undo/redo)
   ui/                  dialogs, menus, toasts, icons
   styles/              CSS

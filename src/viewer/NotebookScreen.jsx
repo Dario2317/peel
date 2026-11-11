@@ -25,8 +25,9 @@ import { Thumbnails } from './Thumbnails.jsx';
 import { CropTool } from './CropTool.jsx';
 import { askText } from '../ui/dialogs.jsx';
 import { Menu } from '../ui/Menu.jsx';
+import { ExportDialog } from '../export/ExportDialog.jsx';
 import {
-  BackIcon, CropIcon, FitWidthIcon, ImportIcon, PageIcon, PagesIcon, PasteIcon, PlusIcon, StudyIcon, ZoomWindowIcon,
+  BackIcon, CropIcon, FitWidthIcon, ImportIcon, PageIcon, PagesIcon, PasteIcon, PlusIcon, ShareIcon, StudyIcon, ZoomWindowIcon,
 } from '../ui/icons.jsx';
 import { useInkTool } from '../ink/useInkTool.js';
 import { HIGHLIGHT_OPACITY } from '../ink/inkStyle.js';
@@ -51,6 +52,7 @@ export function NotebookScreen({ notebookId, onBack }) {
   const [showPages, setShowPages] = useState(false);
   const [cropPage, setCropPage] = useState(null);
   const [incoming, setIncoming] = useState(null);
+  const [exporting, setExporting] = useState(false); // the "Export PDF" dialog is open
   const viewerRef = useRef(null);
 
   // Editing state
@@ -532,6 +534,20 @@ export function NotebookScreen({ notebookId, onBack }) {
             >
               <CropIcon />
             </button>
+            <button
+              className="icon-button"
+              onClick={async () => {
+                // The export reads the notebook from the database: save what's waiting first.
+                finishText();
+                await store.flush();
+                setExporting(true);
+              }}
+              disabled={pages.length === 0}
+              aria-label="Export PDF"
+              title="Export PDF"
+            >
+              <ShareIcon />
+            </button>
             <Menu
               label="Add pages"
               icon={<PlusIcon />}
@@ -692,6 +708,8 @@ export function NotebookScreen({ notebookId, onBack }) {
       {dragging && <div className="drop-overlay">Drop to add pages</div>}
 
       {cropPage && <CropTool page={cropPage} pages={pages} onClose={() => setCropPage(null)} />}
+
+      {exporting && <ExportDialog notebook={notebook} currentIndex={index} onClose={() => setExporting(false)} />}
 
       {incoming && (
         <ImportDialog

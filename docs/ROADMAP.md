@@ -36,7 +36,8 @@ What's done, what's next, and requests to remember.
   - export one notebook as a file and import it back
   - **"Back up everything" / "Restore"** to move all notebooks between the
     PC and the iPad (via AirDrop, iCloud Drive, USB…)
-  - export to PDF with annotations, tapes on or off
+  - ~~export to PDF with annotations, tapes on or off~~ done: pages as
+    pictures, post-it boards as linked pages after their page
   - credits page for the open-source libraries
   - offline/PWA polish
 

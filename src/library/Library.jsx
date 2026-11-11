@@ -7,6 +7,8 @@ import { ImportDialog } from '../import/ImportDialog.jsx';
 import { NotebookCard } from './NotebookCard.jsx';
 import { FolderCard } from './FolderCard.jsx';
 import { MoveDialog } from './MoveDialog.jsx';
+import { ExportDialog } from '../export/ExportDialog.jsx';
+import { closeAllPdfs } from '../import/pdf.js';
 import { InstallHint } from './InstallHint.jsx';
 import { StorageInfo } from './StorageInfo.jsx';
 import { useDropTarget } from './dragDrop.js';
@@ -29,6 +31,7 @@ export function Library({ folderId = null, onOpen, onOpenFolder }) {
   }, []);
   const [incoming, setIncoming] = useState(null); // files waiting for the import dialog
   const [moving, setMoving] = useState(null); // the item in the "Move to…" dialog
+  const [exporting, setExporting] = useState(null); // the notebook in the "Export PDF" dialog
   const { pick, pasteFromClipboard, dragging } = useFileIntake(setIncoming, !incoming);
 
   const allFolders = data?.folders ?? [];
@@ -163,6 +166,7 @@ export function Library({ folderId = null, onOpen, onOpenFolder }) {
               notebook={notebook}
               onOpen={() => onOpen(notebook.id)}
               onMove={() => setMoving({ kind: 'notebook', id: notebook.id, name: notebook.title, folderId: here })}
+              onExport={() => setExporting(notebook)}
             />
           ))}
         </div>
@@ -173,6 +177,16 @@ export function Library({ folderId = null, onOpen, onOpenFolder }) {
       {dragging && <div className="drop-overlay">Drop to make a new notebook{folder ? ` in “${folder.name}”` : ''}</div>}
 
       {moving && <MoveDialog item={moving} folders={allFolders} here={here} onClose={() => setMoving(null)} />}
+
+      {exporting && (
+        <ExportDialog
+          notebook={exporting}
+          onClose={() => {
+            setExporting(null);
+            closeAllPdfs(); // the export opened the notebook's PDFs: free their memory
+          }}
+        />
+      )}
 
       {incoming && (
         <ImportDialog

@@ -26,7 +26,9 @@ createRoot(document.getElementById('root')).render(
 
 // Only in development (npm run dev): handy hooks for testing in the console.
 if (import.meta.env.DEV) {
-  Promise.all([import('./db/db.js'), import('./import/importFiles.js')]).then(([dbModule, importModule]) => {
-    window.__peel = { db: dbModule.db, importFiles: importModule.importFiles };
+  Promise.all([
+    import('./db/db.js'), import('./import/importFiles.js'), import('./export/exportPdf.js'),
+  ]).then(([dbModule, importModule, exportModule]) => {
+    window.__peel = { db: dbModule.db, importFiles: importModule.importFiles, exportPdf: exportModule.exportNotebookPdf };
   });
 }

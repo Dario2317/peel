@@ -7,7 +7,7 @@ import { Menu } from '../ui/Menu.jsx';
 import { MoreIcon } from '../ui/icons.jsx';
 import { dragSource } from './dragDrop.js';
 
-export function NotebookCard({ notebook, onOpen, onMove }) {
+export function NotebookCard({ notebook, onOpen, onMove, onExport }) {
   const coverId = notebook.coverPageId ?? notebook.pageIds[0];
   const coverPage = useLiveQuery(() => (coverId ? db.pages.get(coverId) : undefined), [coverId]);
   const coverUrl = useThumbnailUrl(coverPage);
@@ -46,6 +46,7 @@ export function NotebookCard({ notebook, onOpen, onMove }) {
           items={[
             { label: 'Rename', onSelect: rename },
             { label: 'Move to…', onSelect: onMove },
+            { label: 'Export PDF…', onSelect: onExport, disabled: count === 0 },
             { label: 'Delete', onSelect: remove, danger: true },
           ]}
         />
