@@ -463,3 +463,25 @@ h2 {
     transform: scale(0.96);
   }
 }
+
+/* --- Export PDF dialog ------------------------------------------------- */
+
+.export-dialog {
+  overflow-y: auto;
+}
+.export-dialog .segmented {
+  flex-wrap: wrap;
+  align-self: flex-start;
+}
+.export-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+.export-range .text-input {
+  width: 90px;
+}
+.export-hint {
+  font-weight: 400;
+}

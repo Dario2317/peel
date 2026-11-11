@@ -121,9 +121,12 @@ export function tornTapeShape(width, height, seed) {
   const toXY = ([along, across]) => (horizontal ? [along, across] : [across, along]);
   const polygon = `polygon(${outline.map((p) => toXY(p).map((v) => `${v.toFixed(1)}px`).join(' ')).join(', ')})`;
 
+  // The same outline as [x, y] points (for drawing on a canvas, e.g. the PDF export).
+  const points = outline.map(toXY);
+
   return horizontal
-    ? { left: -tear, top: 0, width: total, height, polygon, horizontal }
-    : { left: 0, top: -tear, width, height: total, polygon, horizontal };
+    ? { left: -tear, top: 0, width: total, height, polygon, points, horizontal }
+    : { left: 0, top: -tear, width, height: total, polygon, points, horizontal };
 }
 
 // A small, stable tilt for each post-it (-2.5° … 2.5°), so they look stuck on by hand.

@@ -105,8 +105,10 @@ export function closeAllPdfs() {
  *   crop:   the page's crop (fractions of the full PDF page)
  *   region: the part to draw, in fractions of the cropped page
  *   pixelWidth/pixelHeight: canvas size in pixels
+ *   cleanup: free the page's memory afterwards (for one-off renders, e.g. the
+ *            PDF export, which goes through every page once)
  */
-export async function renderPdfRegion({ page, region, canvas, pixelWidth, pixelHeight, signal }) {
+export async function renderPdfRegion({ page, region, canvas, pixelWidth, pixelHeight, signal, cleanup = false }) {
   const doc = await getPdfDocument(page.sourceFileId);
   if (signal?.aborted) throw abortError();
   const pdfPage = await doc.getPage(page.pdfPageNumber);
@@ -136,5 +138,6 @@ export async function renderPdfRegion({ page, region, canvas, pixelWidth, pixelH
     await task.promise;
   } finally {
     signal?.removeEventListener('abort', cancel);
+    if (cleanup) pdfPage.cleanup();
   }
 }
